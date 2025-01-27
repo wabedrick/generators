@@ -1,0 +1,262 @@
+<main id="main" class="main">
+
+  <!-- align pagetitle on the left and button on the right -->
+  <div class="d-flex justify-content-between">
+    <div class="pagetitle float-left">
+      <h1>Dashboard</h1>
+      <nav>
+        <ol class="breadcrumb">
+          <li class="breadcrumb-item"><a href="dashboard.php">Home</a></li>
+          <li class="breadcrumb-item active">Dashboard</li>
+        </ol>
+      </nav>
+    </div><!-- End Page Title -->
+    <!-- middle div for indicating the period being viewed -->
+    <div class="period">
+      <h4 class="text-muted">Today</h4>
+    </div>
+  </div>
+
+  <section class="section dashboard">
+    <div class="row">
+      <!-- Total Number of Sites Card -->
+      <div class="col-xxl-4 col-md-5">
+        <div class="card info-card revenue-card">
+
+          <div class="card-body">
+            <h5 class="card-title fs-4 text-center">Sites Brief Information</h5>
+
+            <div class="align-items-center">
+              <div class="card align-items-center p-2">
+                <p><span class="fs-5">Total Number Of Sites</span>
+                <h6><?php echo $total_sites; ?></h6>
+                </p>
+              </div>
+
+              <a href="view-sites-on-status.php?status=active" class="card-link">
+                <div class="card align-items-center p-2">
+                  <p><span class="fs-5">Active</span></p>
+                  <h6><?php echo $total_act_sites; ?></h6>
+                </div>
+              </a>
+
+              <a href="view-sites-on-status.php?status=inactive" class="card-link">
+                <div class="card align-items-center p-2">
+                  <p><span class="fs-5">Inactive</span>
+                  <h6><?php echo $total_inact_sites; ?></h6>
+                  </p>
+                </div>
+              </a>
+
+            </div>
+          </div>
+
+        </div>
+      </div><!-- End Total Number of Sites Card -->
+
+      <div class="col-md-7">
+        <div class="card">
+          <div class="card-body">
+            <h5 class="card-title fs-4 text-center">Site Classification</h5>
+
+            <!-- Donut Chart -->
+            <div id="donutChart" style="min-height: 442px;" class="echart"></div>
+
+            <script>
+              document.addEventListener("DOMContentLoaded", () => {
+                // Use PHP-generated JSON data
+                const chartData = <?php echo $chartDataJson; ?>;
+
+                // Initialize the donut chart
+                const chart = echarts.init(document.querySelector("#donutChart"));
+                chart.setOption({
+                  color: ['#FF0000', '#000000', '#A9A9A9', '#87CEEB', '#FFA500', '#008000'],
+                  tooltip: {
+                    trigger: 'item',
+                    formatter: '{d}%' // Display the percentage on hover
+                  },
+                  legend: {
+                    top: '5%',
+                    left: 'center'
+                  },
+                  series: [{
+                    name: 'Site Count',
+                    type: 'pie',
+                    radius: ['40%', '70%'],
+                    avoidLabelOverlap: false,
+                    label: {
+                      show: true,
+                      position: 'inside',
+                      formatter: '{b}', // Display class and value inside each section
+                      color: '#fff', // Adjust color for readability
+                      fontSize: 14
+                    },
+                    emphasis: {
+                      label: {
+                        show: true,
+                        fontSize: '18',
+                        fontWeight: 'bold'
+                      }
+                    },
+                    labelLine: {
+                      show: false
+                    },
+                    data: chartData // Use dynamic data with values only
+                  }]
+                });
+
+                // Add click event listener for navigation
+                chart.on('click', function(params) {
+                  // Redirect to a URL based on the clicked section's class
+                  const selectedClass = params.data.name.split(':')[0].trim();
+                  window.location.href = `class-details.php?class=${encodeURIComponent(selectedClass)}`;
+                });
+              });
+            </script>
+            <!-- End Donut Chart -->
+
+          </div>
+        </div>
+      </div>
+
+      <div class="col-md-6">
+        <div class="card">
+          <div class="card-body">
+            <h5 class="card-title fs-4 text-center">Departments and Classes</h5>
+
+            <!-- Stacked Bar Chart -->
+            <div id="stackedBarChart" style="min-height: 440px;" class="echart"></div>
+
+            <script>
+              document.addEventListener("DOMContentLoaded", () => {
+                // Use PHP-generated JSON data
+                const departments = <?php echo $departmentsJsonOne; ?>;
+                const chartData = <?php echo $chartDataJsonOne; ?>;
+
+                // Initialize the stacked bar chart
+                const chart = echarts.init(document.querySelector("#stackedBarChart"));
+                chart.setOption({
+                  color: ['#FF0000', '#000000', '#A9A9A9', '#87CEEB', '#FFA500', '#008000'],
+                  tooltip: {
+                    trigger: 'axis',
+                    axisPointer: {
+                      type: 'shadow'
+                    }
+                  },
+                  legend: {
+                    top: '5%',
+                    left: 'center'
+                  },
+                  xAxis: {
+                    type: 'category',
+                    data: departments, // Set department names on x-axis
+                    axisLabel: {
+                      rotate: 30
+                    }
+                  },
+                  yAxis: {
+                    type: 'value',
+                    name: 'Count'
+                  },
+                  series: chartData // Use dynamic data for each class
+                });
+
+                // Add click event listener for navigation
+                // Add click event listener for navigation
+                chart.on('click', function(params) {
+                  // Check if a bar is clicked
+                  if (params.componentType === 'series') {
+                    const selectedDepartment = params.name; // Get the name of the clicked bar (which corresponds to the department)
+
+                    // Redirect to a specific page for that department
+                    window.location.href = `department-details.php?department=${encodeURIComponent(selectedDepartment)}`;
+                  }
+                });
+
+              });
+            </script>
+            <!-- End Stacked Bar Chart -->
+
+          </div>
+        </div>
+      </div>
+
+      <div class="col-md-6">
+        <div class="card">
+          <div class="card-body">
+            <h5 class="card-title fs-4 text-center">Departments and Priorities</h5>
+
+            <!-- Stacked Bar Chart -->
+            <div id="stackedBarChartOne" style="min-height: 440px;" class="echart"></div>
+
+            <script>
+              document.addEventListener("DOMContentLoaded", () => {
+                // Use PHP-generated JSON data
+                const departments = <?php echo $departmentsJsonTwo; ?>;
+                const chartData = <?php echo $chartDataJsonTwo; ?>;
+
+                // Initialize the stacked bar chart
+                const chart = echarts.init(document.querySelector("#stackedBarChartOne"));
+                chart.setOption({
+                  color: ['#FF0000', '#000000', '#A9A9A9', '#87CEEB', '#FFA500', '#008000'], // Custom colors for each series
+                  tooltip: {
+                    trigger: 'axis',
+                    axisPointer: {
+                      type: 'shadow'
+                    }
+                  },
+                  legend: {
+                    top: '1%',
+                    left: 'center',
+                    // Add space between legend and chart
+                  },
+                  grid: {
+                    top: '20%', // Adjust grid top to prevent overlapping with legend
+                    left: '3%',
+                    right: '4%',
+                    bottom: '5%',
+                    containLabel: true
+                  },
+                  xAxis: {
+                    type: 'category',
+                    data: departments, // Set department names on x-axis
+                    axisLabel: {
+                      rotate: 30
+                    }
+                  },
+                  yAxis: {
+                    type: 'value',
+                    name: 'Count'
+                  },
+                  series: chartData // Use dynamic data for each class
+                });
+
+                // Add click event listener for navigation
+                chart.on('click', function(params) {
+                  // Check if a bar is clicked
+                  if (params.componentType === 'series') {
+                    const selectedDepartment = params.name; // Get the name of the clicked bar (which corresponds to the department)
+
+                    // Redirect to a specific page for that department
+                    window.location.href = `department-details.php?department=${encodeURIComponent(selectedDepartment)}`;
+                  }
+                });
+              });
+            </script>
+            <!-- End Stacked Bar Chart -->
+
+          </div>
+        </div>
+      </div>
+
+
+
+    </div>
+    </div>
+    </div>
+
+    </div>
+
+  </section>
+
+</main><!-- End #main -->

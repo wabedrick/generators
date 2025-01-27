@@ -1,0 +1,158 @@
+<?php
+session_start();
+if (!isset($_SESSION["username"])) {
+    header('location: ../index.php');
+}
+?>
+
+<?php
+// Connect to the database
+include 'connection/db_connection.php';
+
+// Retrieve the site ID from the GET request
+$siteId = isset($_GET['site_id']) ? $_GET['site_id'] : null;
+
+// Validate the input
+if (!$siteId || !preg_match('/^[a-zA-Z0-9_-]+$/', $siteId)) {
+    die("Invalid site ID");
+}
+
+// Fetch the site name associated with the site ID
+$site_sql = "SELECT site_name FROM sites WHERE primary_id = '$siteId'";
+$site_result = $conn->query($site_sql);
+
+if (!$site_result || $site_result->num_rows === 0) {
+    die("Site not found.");
+}
+
+$site = $site_result->fetch_assoc();
+$siteName = $site['site_name'];
+
+// Fetch the generator IDs associated with the site ID
+$gen_sql = "SELECT generator_id FROM generators WHERE site_id = '$siteId'";
+$gen_result = $conn->query($gen_sql);
+
+// Validate the result
+if (!$gen_result || $gen_result->num_rows === 0) {
+    die("No generators found for the given site ID.");
+}
+
+// Fetch all generator details
+$sql = "SELECT 
+            g.status AS gen_status, 
+            g.generator_id AS gen_id, 
+            s.site_id AS site_id, 
+            s.site_name AS site_name, 
+            g.actual_run_hours AS actual_run_hours,
+            g.latest_actual_run_hrs AS latest_actual_run_hrs 
+        FROM 
+            sites s 
+        LEFT JOIN 
+            generators g 
+        ON 
+            g.site_id = s.primary_id 
+        WHERE 
+            s.primary_id = '$siteId'";
+$result = $conn->query($sql);
+
+// Check for query execution errors
+if (!$result) {
+    die("Database query failed: " . $conn->error);
+}
+?>
+
+<style>
+    i {
+        font-size: 20px;
+    }
+
+    .table a {
+        padding: 1px;
+    }
+
+    input[type="search"] {
+        width: 100%;
+        padding: 5px;
+        border: 1px solid #ccc;
+        border-radius: 4px;
+        resize: vertical;
+    }
+</style>
+
+<script>
+    // Remove alert message after a short delay
+    setTimeout(() => {
+        const messageContainer = document.getElementById("message-container");
+        if (messageContainer) {
+            messageContainer.remove();
+        }
+    }, 2000); // Delay of 2 seconds
+</script>
+
+<?php include 'header_aside.php'; ?>
+
+<!-- main -->
+<main id="main" class="main">
+
+    <?php if (isset($_SESSION['message'])) { ?>
+        <div class="container" id="message-container">
+            <div class="row">
+                <div class="col-md-12">
+                    <div class="alert alert-success d-flex justify-content-between align-items-center">
+                        <?php echo $_SESSION['message']; ?>
+                        <!-- Add button for removing the alert message -->
+                        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    <?php }
+    unset($_SESSION['message']); ?>
+
+    <section>
+        <div class="container">
+            <div class="row">
+                <div class="col-md-12">
+                    <h2>List of Generators</h2>
+                    <hr>
+                </div>
+
+                <table class="table datatable table-striped">
+                    <thead class="thead-dark">
+                        <tr>
+                            <th scope="col">Status</th>
+                            <th scope="col">Generator ID</th>
+                            <th scope="col">Site ID</th>
+                            <th scope="col">Site Name</th>
+                            <th scope="col">Actual RHrs</th>
+                            <th scope="col">Latest Actual RHrs</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <?php
+                        $index = 1;
+                        while ($generator = $result->fetch_assoc()) {
+                        ?>
+                            <tr>
+                                <td><?php echo htmlspecialchars($generator['gen_status']); ?></td>
+                                <td>
+                                    <?php 
+                                    // Dynamically generate generator ID as sitename_G1, sitename_G2, etc.
+                                    echo htmlspecialchars($siteName . '_G' . $index++);
+                                    ?>
+                                </td>
+                                <td><?php echo htmlspecialchars($generator['site_id']); ?></td>
+                                <td><?php echo htmlspecialchars($generator['site_name']); ?></td>
+                                <td><?php echo htmlspecialchars($generator['actual_run_hours']); ?></td>
+                                <td><?php echo htmlspecialchars($generator['latest_actual_run_hrs']); ?></td>
+                            </tr>
+                        <?php } ?>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </section>
+</main><!-- End #main -->
+
+<!-- Footer -->
+<?php include 'footer.php'; ?>
