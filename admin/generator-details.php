@@ -86,7 +86,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             echo "Not available";
         }
         ?>
-        <h3 class="text-center" style="font-size: 1.5rem; text-decoration:underline;"><?php echo htmlspecialchars($real_generator_id . ', ' . $generator['site_name']); ?></h3>
+        <h3 class="text-center" style="font-size: 1.5rem; text-decoration:underline;"><?php echo htmlspecialchars($real_generator_id); ?></h3>
         <div class="col">
             <p><span class="label">Projected Run Hours:</span> <?php echo htmlspecialchars($cumulative_hours); ?></p>
             <p><span class="label">Generator Age:</span> <?php echo htmlspecialchars($genset_age) . ' months'; ?></p>

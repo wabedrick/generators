@@ -5,7 +5,7 @@
     <meta charset="utf-8">
     <meta content="width=device-width, initial-scale=1.0" name="viewport">
 
-    <title>GENERATORS DASHBOARD</title>
+    <title>SITE POWER SYSTEM</title>
     <meta content="" name="description">
     <meta content="" name="keywords">
 
@@ -28,6 +28,9 @@
 
     <!-- Template Main CSS File -->
     <link href="../assets/css/style.css" rel="stylesheet">
+
+    <!-- The charts library -->
+    <script src="https://cdn.jsdelivr.net/npm/apexcharts"></script>
 
     <style>
         .container {
@@ -128,8 +131,8 @@
                 <ul id="components-nav" class="nav-content collapse " data-bs-parent="#sidebar-nav">
 
                     <li>
-                        <a href="view-generators.php">
-                            <i class="bi bi-circle"></i><span>Generator Info</span>
+                        <a href="generator-dashboard.php">
+                            <i class="bi bi-circle"></i><span>Dashboard</span>
                         </a>
                     </li>
                     <li>
@@ -154,6 +157,25 @@
                     <li>
                         <a href="add-site.php">
                             <i class="bi bi-circle"></i><span>Add a Site</span>
+                        </a>
+                    </li>
+
+                </ul>
+            </li><!-- End Loans Nav -->
+
+            <li class="nav-item">
+                <a class="nav-link collapsed" data-bs-target="#update-nav" data-bs-toggle="collapse" href="#">
+                    <i class="bi bi-journal-text"></i><span>Update Database</span><i class="bi bi-chevron-down ms-auto"></i>
+                </a>
+                <ul id="update-nav" class="nav-content collapse " data-bs-parent="#sidebar-nav">
+                    <li>
+                        <a href="update_sites_table.php">
+                            <i class="bi bi-circle"></i><span>Sites Table</span>
+                        </a>
+                    </li>
+                    <li>
+                        <a href="update_generators_table.php">
+                            <i class="bi bi-circle"></i><span>Generators Table</span>
                         </a>
                     </li>
 

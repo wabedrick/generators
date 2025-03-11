@@ -1,9 +1,14 @@
 <?php
+
 include 'connection/db_connection.php';
 session_start();
 if (!isset($_SESSION["username"])) {
   header('location: ../index.php');
 }
+
+include 'header_aside.php';
+
+
 // total number of sites
 $sql1 = "SELECT COUNT(*) AS number_of_sites FROM sites";
 $result1 = mysqli_query($conn, $sql1);
@@ -16,12 +21,21 @@ $active_result = mysqli_query($conn, $active_sql);
 $act_sites = mysqli_fetch_assoc($active_result);
 $total_act_sites = $act_sites['number_of_act_sites'];
 
+// total number of Active sites with status Up
+$active_up_sql = "SELECT COUNT(*) AS number_of_act_up_sites FROM sites WHERE site_status='active' 
+AND active_site_status = 'Up'";
+$active_up_result = mysqli_query($conn, $active_up_sql);
+$act_up_sites = mysqli_fetch_assoc($active_up_result);
+$total_act_up_sites = $act_up_sites['number_of_act_up_sites'];
+
+// Total number of active sites with status Down
+$total_active_down_sites = $total_act_sites - $total_act_up_sites;
+
 // total number of Inactive sites
 $inactive_sql = "SELECT COUNT(*) AS number_of_inact_sites FROM sites WHERE site_status='inactive'";
 $inactive_result = mysqli_query($conn, $inactive_sql);
 $inact_sites = mysqli_fetch_assoc($inactive_result);
 $total_inact_sites = $inact_sites['number_of_inact_sites'];
-
 
 // NUMBER OF SILES BY THEIR CLASSES
 $chart_sql = "SELECT class, COUNT(*) AS number_of_sites_count FROM sites GROUP BY class";
@@ -51,7 +65,6 @@ foreach ($data as $item) {
 }
 
 $chartDataJson = json_encode($chartData);
-
 
 // DATA FOR THE SITES UNDER EACH REGION
 // Fetch and count the occurrences of each site and it's department from the database
@@ -195,31 +208,108 @@ $activeDataJson = json_encode($activeData);
 $inactiveDataJson = json_encode($inactiveData);
 
 
+// CODE TO FETCH DATA FOR A STACKED BAR CHART FOR THE UP AND DOWN SITE STATUS FOR THE DIFFERENT TIME DIFFERENCES
+// Function to fetch site status based on the selected time frame
+// Function to fetch active site status
+function fetchActiveSiteStatus($timeFrame)
+{
+  global $conn;
+
+  // Determine interval based on selected time frame
+  switch ($timeFrame) {
+    case 'last_12_hours':
+      $interval = "INTERVAL 12 HOUR";
+      break;
+    case 'last_24_hours':
+      $interval = "INTERVAL 24 HOUR";
+      break;
+    case 'last_7_days':
+      $interval = "INTERVAL 7 DAY";
+      break;
+    case 'last_4_weeks':
+      $interval = "INTERVAL 28 DAY";
+      break;
+    default:
+      $interval = "INTERVAL 24 HOUR";
+  }
+
+  // Query to get active site status
+  $active_site_status_sql = "
+      SELECT 
+          DATE_FORMAT(created_at, '%Y-%m-%d %H:00') AS time_period,
+          SUM(CASE WHEN active_site_status = 'Up' THEN 1 ELSE 0 END) AS up_count,
+          SUM(CASE WHEN active_site_status = 'Down' THEN 1 ELSE 0 END) AS down_count
+      FROM sites
+      WHERE site_status = 'Active' AND created_at >= NOW() - $interval
+      GROUP BY time_period ORDER BY time_period";
+
+  $active_site_status_result = $conn->query($active_site_status_sql);
+  $data = [];
+
+  while ($row = $active_site_status_result->fetch_assoc()) {
+    $data[] = $row;
+  }
+
+  return json_encode($data);
+}
+
+$selectedTimeFrame = $_GET['time_frame'] ?? 'last_12_hours';
+// header('Content-Type: application/json');
+$chartData = fetchActiveSiteStatus($selectedTimeFrame);
+// echo $chartData;
+// exit;
+
 ?>
-<?php include('header_aside.php'); ?>
 
 <style>
+  .hover-info {
+    /* display: none;
+    position: absolute; */
+    /* bottom: 100%; */
+    /* Position above the card */
+    /* left: 90%; */
+    transform: translateX(-50%);
+    background: rgba(255, 255, 200, 0.8);
+    color: black;
+    padding: 8px;
+    border-radius: 5px;
+    white-space: nowrap;
+    font-size: 14px;
+    text-align: center;
+    z-index: 10;
+  }
+
+  .active-card:hover .hover-info,
+  .hover-info:hover {
+    display: flex;
+  }
+
+  .down-link {
+    color: red;
+  }
+
+  .down-link:hover {
+    text-decoration: underline;
+    color: #ff4d4d;
+    font-weight: bold;
+  }
+
   /* Add some custom styles to make the chart container look better */
   .chart-container {
-    /* Adjust the width to make the chart responsive */
-    /* max-width: 1000px; */
     margin: 0 auto;
     padding: 20px;
     /* background-color: #f4f4f4;  */
     border-radius: 10px;
-    /* Rounded corners */
     /* box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1); */
   }
 
   canvas {
     max-height: 500px;
-    /* Increase the chart height */
   }
 </style>
-<!-- Main Content -->
-<!-- Add this code inside your main dashboard section -->
-<main id="main" class="main">
 
+<!-- Main Content -->
+<main id="main" class="main">
   <!-- align pagetitle on the left and button on the right -->
   <div class="d-flex justify-content-between">
     <div class="pagetitle float-left">
@@ -243,32 +333,49 @@ $inactiveDataJson = json_encode($inactiveData);
   <section class="section dashboard">
     <div class="row">
       <!-- Total Number of Sites Card -->
-      <div class="col-xxl-4 col-md-4">
+      <div class="col-xxl-3 col-md-3">
         <div class="card info-card revenue-card">
 
           <div class="card-body">
-            <h5 class="card-title fs-4 text-center">Sites Brief Information</h5>
+            <h5 class="card-title fs-6 text-center">Sites Summary</h5>
 
             <div class="">
               <a href="view-all-sites.php" class="card-link">
                 <div class="card align-items-center p-2">
-                  <p><span class="fs-5">Total</span>
-                  <h6><?php echo $total_sites; ?></h6>
+                  <p><span class="fs-6">Total</span>
+                  <p><?php echo $total_sites; ?></p>
                   </p>
               </a>
             </div>
 
-            <a href="view-sites-on-status.php?status=active" class="card-link">
-              <div class="card align-items-center p-2">
-                <p><span class="fs-5">Active</span></p>
-                <h6><?php echo $total_act_sites; ?></h6>
-              </div>
-            </a>
+            <div class="card align-items-center p-2 position-relative active-card">
+              <a href="view-sites-on-status.php?status=active" class="card-link">
+                <p><span class="fs-6">Active</span> (<?php echo $total_act_sites; ?>)</p>
+                <p>
+                  <div class="" style="display: flex;">
+                    <p style="margin-right: 12px; color: black;">Up: <?php echo htmlspecialchars($total_act_up_sites); ?>
+                      <span>
+                        <p>
+                          <a href="view-sites-on-status.php?status=active&filter=Down" class="down-link">
+                            Down:
+                            <?php echo htmlspecialchars($total_active_down_sites); ?>
+                          </a>
+                        </p>
+                      </span>
+                    </p>
+
+                  </div>
+                </p>
+              </a>
+
+              <!-- Floating container for Up and Down values -->
+
+            </div>
 
             <a href="view-sites-on-status.php?status=inactive" class="card-link">
               <div class="card align-items-center p-2">
-                <p><span class="fs-5 text-danger">Inactive</span>
-                <h6 class="text-danger"><?php echo $total_inact_sites; ?></h6>
+                <p><span class="fs-6 text-danger">Inactive</span>
+                <p class="text-danger"><?php echo $total_inact_sites; ?></p>
                 </p>
               </div>
             </a>
@@ -279,7 +386,108 @@ $inactiveDataJson = json_encode($inactiveData);
       </div>
     </div><!-- End Total Number of Sites Card -->
 
-    <div class="col-md-8">
+    <div class="col-md-9">
+      <div class="card">
+        <div class="card-body">
+          <h5 class="card-title fs-4 text-center">Active Sites Status</h5>
+
+          <div class="chart-container" style="margin-top: -2rem;">
+            <div class="time-select">
+              <label for="timeFrame">Select Time Frame:</label>
+              <select id="timeFrame" onchange="updateChart()">
+                <option value="last_12_hours" selected>Last 12 Hours</option>
+                <option value="last_24_hours">Last 24 Hours</option>
+                <option value="last_7_days">Last 7 Days</option>
+                <option value="last_4_weeks">Last 4 Weeks</option>
+              </select>
+            </div>
+            <div id="activeSitesChart" style="height: 380px;"></div>
+          </div>
+
+          <!-- <script src="https://cdn.jsdelivr.net/npm/apexcharts"></script> -->
+          <script>
+            let chart;
+
+            function fetchChartData(timeFrame) {
+              fetch(`dashboard.php?time_frame=${timeFrame}`)
+                .then(response => response.json())
+                .then(data => {
+                  console.log(data); // Check the structure of the data
+                  const categories = data.map(item => item.time_period);
+                  const upCounts = data.map(item => parseInt(item.up_count));
+                  const downCounts = data.map(item => parseInt(item.down_count));
+
+                  const options = {
+                    chart: {
+                      type: 'bar',
+                      height: 500,
+                      stacked: true,
+                      toolbar: {
+                        show: true
+                      }
+                    },
+                    plotOptions: {
+                      bar: {
+                        horizontal: false,
+                        borderRadius: 5
+                      }
+                    },
+                    series: [{
+                        name: 'Up Sites',
+                        data: upCounts
+                      },
+                      {
+                        name: 'Down Sites',
+                        data: downCounts
+                      }
+                    ],
+                    xaxis: {
+                      categories: categories,
+                      title: {
+                        text: 'Time Period'
+                      }
+                    },
+                    yaxis: {
+                      title: {
+                        text: 'Number of Sites'
+                      }
+                    },
+                    colors: ['#28a745', '#dc3545'],
+                    tooltip: {
+                      y: {
+                        formatter: val => `${val} site(s)`
+                      }
+                    },
+                    legend: {
+                      position: 'top'
+                    }
+                  };
+
+                  if (chart) {
+                    chart.updateOptions(options);
+                  } else {
+                    chart = new ApexCharts(document.querySelector("#activeSitesChart"), options);
+                    chart.render();
+                  }
+                })
+                .catch(error => console.error('Error fetching data:', error));
+            }
+
+            function updateChart() {
+              const timeFrame = document.getElementById('timeFrame').value;
+              fetchChartData(timeFrame);
+            }
+
+            // Initial chart load
+            fetchChartData('last_12_hours');
+          </script>
+
+        </div>
+      </div>
+    </div>
+
+
+    <div class="col-md">
       <div class="card">
         <div class="card-body">
           <h5 class="card-title fs-4 text-center">Site Classification</h5>
@@ -347,7 +555,7 @@ $inactiveDataJson = json_encode($inactiveData);
     <div class="col-md-6">
       <div class="card">
         <div class="card-body">
-          <h5 class="card-title fs-4 text-center">Departments and Classes</h5>
+          <h5 class="card-title fs-6 text-center">Departments and Classes</h5>
 
           <!-- Stacked Bar Chart -->
           <div id="stackedBarChart" style="min-height: 440px;" class="echart"></div>
@@ -409,7 +617,7 @@ $inactiveDataJson = json_encode($inactiveData);
     <div class="col-md-6">
       <div class="card">
         <div class="card-body">
-          <h5 class="card-title fs-4 text-center">Departments and Priorities</h5>
+          <h5 class="card-title fs-6 text-center">Departments and Priorities</h5>
 
           <!-- Stacked Bar Chart -->
           <div id="stackedBarChartOne" style="min-height: 440px;" class="echart"></div>
@@ -474,83 +682,7 @@ $inactiveDataJson = json_encode($inactiveData);
       </div>
     </div>
 
-    <div class="col-lg-6">
-      <div class="card">
-        <div class="card-body">
-          <h5 class="card-title">Sites by Status Over Last 4 Weeks</h5>
 
-          <!-- Column Chart -->
-          <div id="columnChart"></div>
-
-          <script src="https://cdn.jsdelivr.net/npm/apexcharts"></script>
-          <script>
-            document.addEventListener("DOMContentLoaded", () => {
-              // Use PHP-generated JSON data
-              const weeks = <?php echo $weeksJson; ?>;
-              const activeData = <?php echo $activeDataJson; ?>;
-              const inactiveData = <?php echo $inactiveDataJson; ?>;
-
-              // Initialize the column chart
-              const chart = new ApexCharts(document.querySelector("#columnChart"), {
-                series: [{
-                  name: 'Active Sites',
-                  data: activeData
-                }, {
-                  name: 'Inactive Sites',
-                  data: inactiveData
-                }],
-                chart: {
-                  type: 'bar',
-                  height: 350
-                },
-                plotOptions: {
-                  bar: {
-                    horizontal: false,
-                    columnWidth: '55%',
-                    endingShape: 'rounded'
-                  },
-                },
-                dataLabels: {
-                  enabled: false
-                },
-                stroke: {
-                  show: true,
-                  width: 2,
-                  colors: ['transparent']
-                },
-                xaxis: {
-                  categories: weeks, // Week labels on x-axis
-                },
-                yaxis: {
-                  title: {
-                    text: 'Site Count'
-                  }
-                },
-                fill: {
-                  opacity: 1
-                },
-                tooltip: {
-                  y: {
-                    formatter: function(val) {
-                      return val + " sites";
-                    }
-                  }
-                }
-              });
-              chart.render();
-            });
-          </script>
-          <!-- End Column Chart -->
-
-        </div>
-      </div>
-    </div>
-
-
-
-
-    </div>
-    </div>
     </div>
 
     </div>

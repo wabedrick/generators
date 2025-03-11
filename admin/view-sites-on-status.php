@@ -10,8 +10,30 @@ if (!isset($_SESSION["username"])) {
 include 'connection/db_connection.php';
 // Get the site class name
 $site_status = isset($_GET['status']) ? $_GET['status'] : '';
+$filter = isset($_GET['filter']) ? $_GET['filter'] : '';
 
-$sql = "SELECT
+if ($site_status === 'active' and $filter === 'Down') {
+
+    $sql = "SELECT
+    s.site_id AS site_id,
+    s.primary_id AS primary_id,
+    S.secondary_id AS secondary_id,
+    s.site_name AS site_name,
+    s.site_auto_status AS site_auto_status,
+    s.department AS department,
+    s.tx_site_type AS tx_site_type,
+    s.class AS class,
+    s.site_status AS site_status,
+    s.active_site_status AS active_site_status,
+    s.site_down_date AS site_down_date,
+    (SELECT COUNT(sd.dependent_site_id) FROM dependencies sd WHERE s.primary_id=sd.site_id) AS dependent_sites_count,
+    (SELECT COUNT(DISTINCT g.generator_id) FROM generators g WHERE s.primary_id = g.site_id) AS number_of_generators_count
+FROM 
+    sites s
+WHERE 
+    s.site_status = '$site_status' AND s.active_site_status = 'Down'";
+} else if ($site_status === 'active' and $filter === 'Up') {
+    $sql = "SELECT
     s.site_id AS site_id,
     s.primary_id AS primary_id,
     S.secondary_id AS secondary_id,
@@ -24,10 +46,29 @@ $sql = "SELECT
     s.active_site_status AS active_site_status,
     (SELECT COUNT(sd.dependent_site_id) FROM dependencies sd WHERE s.primary_id=sd.site_id) AS dependent_sites_count,
     (SELECT COUNT(DISTINCT g.generator_id) FROM generators g WHERE s.primary_id = g.site_id) AS number_of_generators_count
-FROM 
+FROM
     sites s
-WHERE 
+WHERE
+    s.site_status = '$site_status' AND s.active_site_status = 'Up'";
+} else {
+    $sql = "SELECT
+    s.site_id AS site_id,
+    s.primary_id AS primary_id,
+    S.secondary_id AS secondary_id,
+    s.site_name AS site_name,
+    s.site_auto_status AS site_auto_status,
+    s.department AS department,
+    s.tx_site_type AS tx_site_type,
+    s.class AS class,
+    s.site_status AS site_status,
+    s.active_site_status AS active_site_status,
+    (SELECT COUNT(sd.dependent_site_id) FROM dependencies sd WHERE s.primary_id=sd.site_id) AS dependent_sites_count,
+    (SELECT COUNT(DISTINCT g.generator_id) FROM generators g WHERE s.primary_id = g.site_id) AS number_of_generators_count
+FROM
+    sites s
+WHERE
     s.site_status = '$site_status'";
+}
 
 $result = $conn->query($sql);
 ?>
@@ -118,11 +159,21 @@ $result = $conn->query($sql);
                             <?php if ($site_status == 'active') {
                                 echo '<th scope="col">Status</th>';
                             } ?>
+                            <?php
+                            if ($filter === 'Down') {
+                                echo '<th scope="col">Down Date</th>';
+                                echo '<th scope="col">Hours Down</th>';
+                            }
+                            ?>
                         </tr>
                     </thead>
                     <tbody>
 
-                        <?php while ($site = $result->fetch_assoc()) { ?>
+                        <?php while ($site = $result->fetch_assoc()) {
+                            if ($filter === 'Down' && $site['active_site_status'] === 'Down') {
+                                $hours_down = round((time() - strtotime($site['site_down_date'])) / 3600, 2);
+                            }
+                        ?>
                             <tr>
                                 <td scope="row">
 
@@ -154,6 +205,18 @@ $result = $conn->query($sql);
                                         echo $site['active_site_status'];
                                     } ?>
                                 </td>
+
+                                <td>
+                                    <?php if ($filter === 'Down') {
+
+                                        echo date("jS M Y, h:i:s A", strtotime($site['site_down_date']));
+                                    } ?>
+                                </td>
+
+                                <td>
+                                    <?php if ($filter === 'Down') {
+                                        echo $hours_down;
+                                    } ?>
                             </tr>
                         <?php } ?>
                     </tbody>
