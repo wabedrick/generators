@@ -1,0 +1,1081 @@
+<?php
+include 'connection/db_connection.php';
+session_start();
+if (!isset($_SESSION["username"])) {
+    header('location: ../index.php');
+}
+include('header_aside.php');
+
+// total number of sites
+$sql1 = "SELECT COUNT(*) AS number_of_generators FROM generators";
+$result1 = mysqli_query($conn, $sql1);
+$generators = mysqli_fetch_assoc($result1);
+$total_generators = $generators['number_of_generators'];
+
+// total number of Operational Generators
+$active_sql = "SELECT COUNT(*) AS number_of_oper_generators FROM generators WHERE status='Operational'";
+$active_result = mysqli_query($conn, $active_sql);
+$oper_generators = mysqli_fetch_assoc($active_result);
+$total_oper_generators = $oper_generators['number_of_oper_generators'];
+
+// total number of No Operational Generators
+$inactive_sql = "SELECT COUNT(*) AS number_of_notoper_generators FROM generators WHERE status='Not Operational'";
+$inactive_result = mysqli_query($conn, $inactive_sql);
+$notoper_generators = mysqli_fetch_assoc($inactive_result);
+$total_notoper_generators = $notoper_generators['number_of_notoper_generators'];
+
+// total number of N/A OR others Generators
+$NA_sql = "SELECT COUNT(*) AS number_of_na_generators FROM generators WHERE status='N/A'";
+$NA_result = mysqli_query($conn, $NA_sql);
+$NA_generators = mysqli_fetch_assoc($NA_result);
+$total_NA_generators = $NA_generators['number_of_na_generators'];
+
+// GENERATOR BY AGE
+// Define age categories
+$categories = [
+    '0 - 6 Months' => 'TIMESTAMPDIFF(MONTH, installation_date, NOW()) BETWEEN 0 AND 6',
+    '6 - 12 Months' => 'TIMESTAMPDIFF(MONTH, installation_date, NOW()) BETWEEN 7 AND 12',
+    '1 - 2 Years' => 'TIMESTAMPDIFF(YEAR, installation_date, NOW()) BETWEEN 1 AND 2',
+    '2 - 5 Years' => 'TIMESTAMPDIFF(YEAR, installation_date, NOW()) BETWEEN 3 AND 5',
+    '5+ Years' => 'TIMESTAMPDIFF(YEAR, installation_date, NOW()) > 5'
+];
+
+$barChartData = [];
+
+foreach ($categories as $label => $condition) {
+    $sql = "SELECT COUNT(*) as count FROM generators WHERE $condition";
+    $result = $conn->query($sql);
+    $row = $result->fetch_assoc();
+    $barChartData[] = ['category' => $label, 'count' => (int)$row['count']];
+}
+
+// Encode data for JavaScript
+$barChartDataJson = json_encode($barChartData);
+
+// GENERATOR BY ACTUAL RUN HOURS
+// Fetch data for the bar chart (Generators grouped by run hours)
+$runHoursSql = "
+    SELECT 
+        CASE 
+            WHEN actual_run_hours BETWEEN 0 AND 5000 THEN '0-5000'
+            WHEN actual_run_hours BETWEEN 5001 AND 10000 THEN '5001-10000'
+            WHEN actual_run_hours BETWEEN 10001 AND 15000 THEN '10001-15000'
+            WHEN actual_run_hours BETWEEN 15001 AND 20000 THEN '15001-20000'
+            WHEN actual_run_hours BETWEEN 20001 AND 30000 THEN '20001-30000'
+            WHEN actual_run_hours BETWEEN 30001 AND 40000 THEN '30001-40000'
+            ELSE 'Above 40000'
+        END AS run_hours_range,
+        COUNT(*) AS count
+    FROM generators
+    GROUP BY run_hours_range
+    ORDER BY MIN(actual_run_hours);
+";
+
+// $runHoursResult = $conn->query($runHoursSql);
+$runHoursResult = mysqli_query($conn, $runHoursSql);
+
+$barChartDataTwo = [];
+
+if ($runHoursResult->num_rows > 0) {
+    while ($row = $runHoursResult->fetch_assoc()) {
+        $barChartDataTwo[] = [
+            'category' => $row['run_hours_range'],
+            'count' => (int)$row['count']
+        ];
+    }
+}
+
+// Convert to JSON for JavaScript
+$barChartDataTwoJson = json_encode($barChartDataTwo);
+
+
+// NUMBER OF GENERATORS BY THEIR CAPACITY
+$chart_sql = "SELECT capacity, COUNT(*) AS number_of_generators_count 
+              FROM generators 
+              WHERE capacity != 'Power Plant' 
+                AND capacity != 'Power by owner' 
+                AND capacity != 'Power by Canez' 
+                AND capacity != 'No genset'
+                AND capacity != 'N/A'
+                AND capacity != 'Fully Solar' 
+              GROUP BY capacity";
+$result = $conn->query($chart_sql);
+
+$data = [];
+$totalCount = 0;
+
+if ($result->num_rows > 0) {
+    while ($row = $result->fetch_assoc()) {
+        $totalCount += $row['number_of_generators_count']; // Calculate total count
+        $data[] = $row;
+    }
+}
+
+// Define hardcoded colors
+$colors = [
+    '#FF0000',
+    '#000000',
+    '#A9A9A9',
+    '#87CEEB',
+    '#FFA500',
+    '#008000',
+    '#0000FF',
+    '#A9FF00',
+    '#FFA800',
+    '#800080',
+    '#FFFF00',
+    '#00FFFF',
+    '#FFC0CB',
+    '#A52A2A',
+    '#808080'
+];
+
+$chartData = [];
+$colorIndex = 0;
+
+foreach ($data as $item) {
+    $capacity = $item['capacity'];
+    $count = $item['number_of_generators_count'];
+
+    // Calculate percentage
+    $percentage = round(($count / $totalCount) * 100, 1);
+
+    // Assign a color from the hardcoded array
+    $color = $colors[$colorIndex % count($colors)]; // Cycle through colors if there are more capacities than colors
+    $colorIndex++;
+
+    // Prepare chart data
+    $chartData[] = [
+        'value' => (int)$count, // Cast to integer
+        'name' => "$capacity: $count ($percentage%)", // Include percentage in the label
+        'color' => $color // Assign a color
+    ];
+}
+
+$chartDataJson = json_encode($chartData);
+
+
+// Fetch data for the pie chart (generators by brand)
+$brand_sql = "SELECT brand, COUNT(*) AS number_of_generators_brand_count 
+              FROM generators 
+              GROUP BY brand";
+$brand_result = $conn->query($brand_sql);
+
+$brandData = [];
+$totalBrandCount = 0;
+
+if ($brand_result->num_rows > 0) {
+    while ($brand_row = $brand_result->fetch_assoc()) {
+        $totalBrandCount += $brand_row['number_of_generators_brand_count']; // Calculate total count
+        $brandData[] = $brand_row;
+    }
+}
+
+// Define hardcoded colors
+$colors = ['#FF0000', '#0000FF', '#00FF00', '#FFA500', '#800080', '#FFFF00', '#00FFFF', '#FFC0CB', '#A52A2A', '#808080'];
+
+$pieChartData = [];
+$colorIndex = 0;
+
+foreach ($brandData as $item_one) {
+    $brand = $item_one['brand'];
+    $brand_count = $item_one['number_of_generators_brand_count'];
+
+    // Calculate percentage
+    $brand_percentage = round(($brand_count / $totalBrandCount) * 100, 1);
+
+    // Assign a color from the hardcoded array
+    $color = $colors[$colorIndex % count($colors)]; // Cycle through colors if there are more brands than colors
+    $colorIndex++;
+
+    // Prepare chart data with value and percentage in the name
+    $pieChartData[] = [
+        'value' => (int)$brand_count, // Cast to integer
+        'name' => "$brand ($brand_count, {$brand_percentage}%)", // Include value and percentage in the name
+        'color' => $color // Assign a color
+    ];
+}
+
+$pieChartDataJson = json_encode($pieChartData);
+
+// GENERATORS BY THEIR PERCENTAGE OPERATION TIMES
+$line_sql = "SELECT percent_op_time, COUNT(*) AS number_of_generators_count 
+             FROM generators 
+             GROUP BY percent_op_time";
+$result = $conn->query($line_sql);
+
+$chartLabels = [];
+$chartValues = [];
+$chartColors = [];
+
+// Define hardcoded colors
+$hardcodedColors = [
+    '#FF5733',
+    '#FF0000',
+    '#000000',
+    '#A9A9A9',
+    '#87CEEB',
+    '#FFA500',
+    '#008000'
+];
+
+$colorIndex = 0;
+
+if ($result->num_rows > 0) {
+    while ($row = $result->fetch_assoc()) {
+        $chartLabels[] = $row['percent_op_time'] . "%"; // Add % sign to labels
+        $chartValues[] = $row['number_of_generators_count'];
+
+        // Assign a color from the predefined list (cycle through if needed)
+        $chartColors[] = $hardcodedColors[$colorIndex % count($hardcodedColors)];
+        $colorIndex++;
+    }
+}
+
+// Convert to JSON for JavaScript
+$chartLabelsJson = json_encode($chartLabels);
+$chartValuesJson = json_encode($chartValues);
+$chartColorsJson = json_encode($chartColors);
+
+
+?>
+
+<style>
+    /* Add some custom styles to make the chart container look better */
+    .chart-container {
+        margin: 0 auto;
+        padding: 10px;
+        border-radius: 10px;
+        cursor: pointer;
+        /* Add pointer cursor to indicate clickable */
+    }
+
+    .modal {
+        display: none;
+        position: fixed;
+        z-index: 1050;
+        left: 0;
+        top: 0;
+        width: 100%;
+        height: 100%;
+        overflow: auto;
+        background-color: rgba(0, 0, 0, 0.7);
+    }
+
+    .modal-content {
+        background-color: #fefefe;
+        margin: 5% auto;
+        padding: 20px;
+        border: 1px solid #888;
+        width: 80%;
+        border-radius: 10px;
+    }
+
+    .close-modal {
+        color: #aaa;
+        float: right;
+        font-size: 28px;
+        font-weight: bold;
+        cursor: pointer;
+    }
+
+    .close-modal:hover,
+    .close-modal:focus {
+        color: black;
+        text-decoration: none;
+        cursor: pointer;
+    }
+
+    .on-id-hoover {
+        color: black;
+    }
+
+    .on-id-hoover:hover {
+        color: grey;
+        text-decoration: underline;
+    }
+
+    /* Make chart containers smaller and clickable */
+    .chart-card {
+        transition: transform 0.3s;
+        cursor: pointer;
+    }
+
+    .chart-card:hover {
+        transform: scale(1.02);
+    }
+
+    #pieChart {
+        min-height: 195px;
+        background: #f5f5f5;
+    }
+
+    /* #pieChart {
+        border: 2px solid red;
+    } */
+</style>
+
+<div id="chartModal" class="modal">
+    <div class="modal-content">
+        <span class="close-modal">&times;</span>
+        <h5 id="modalTitle" class="card-title fs-6 text-center"></h5>
+        <div id="expandedChart" style="height: 500px;"></div>
+    </div>
+</div>
+
+<!-- Add this code inside your main dashboard section -->
+<main id="main" class="main">
+    <!-- Your existing header code remains the same -->
+    <div class="d-flex justify-content-between">
+        <div class="pagetitle float-left">
+            <h1>Generators Dashboard</h1>
+            <nav>
+                <ol class="breadcrumb">
+                    <li class="breadcrumb-item"><a href="dashboard.php">Home</a></li>
+                    <li class="breadcrumb-item active">Generators Dashboard</li>
+                </ol>
+            </nav>
+        </div>
+        <div class="period">
+            <h4 class="text-muted">Today</h4>
+        </div>
+    </div>
+
+    <section class="section dashboard">
+        <div class="row">
+            <!-- Total Number of Sites Card -->
+            <div class="col-xxl-2 col-md-2">
+                <div class="card info-card revenue-card">
+                    <div class="card-body">
+                        <h5 class="card-title fs-6 text-center">Generators</h5>
+                        <div>
+                            <a href="view-all-generators.php" class="card-link">
+                                <div class="card align-items-center p-2" style="width:auto; height:4rem">
+                                    <p><span class="fs-6 text-primary pt-4">Total</span>
+                                    <p class="" style="margin-top:-.8rem"><?php echo $total_generators; ?></p>
+                                    </p>
+                                </div>
+                            </a>
+                        </div>
+
+                        <a href="view-generators-on-status.php?status=Operational" class="card-link">
+                            <div class="card align-items-center" style="width:auto; height:4rem">
+                                <p><span class="fs-6 text-primary">Operational</span>
+                                <p class="" style="margin-top:-.8rem"><?php echo $total_oper_generators; ?></p>
+                                </p>
+                            </div>
+                        </a>
+
+                        <a href="view-generators-on-status.php?status=Not Operational" class="card-link">
+                            <div class="card align-items-center" style="margin-top:-2rem; width:auto; height:4rem">
+                                <p><span class="fs-6 text-danger pt-4">Not Oprtnal</span>
+                                <p class="" style="margin-top:-.8rem"><?php echo $total_notoper_generators; ?></p>
+                                </p>
+                            </div>
+                        </a>
+
+                        <a href="view-generators-on-status.php?status=N/A" class="card-link">
+                            <div class="card align-items-center" style="margin-top:-2rem; width:auto; height:4rem">
+                                <p><span class="fs-6 text-success pt-4">Other(N/A)</span>
+                                <p class="" style="margin-top:-.8rem"><?php echo $total_NA_generators; ?></p>
+                                </p>
+                            </div>
+                        </a>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-md-10">
+                <div class="row">
+                    <div class="col-md-4">
+                        <div class="card chart-card" data-chart-id="barChart" data-chart-title="Generators by Age">
+                            <div class="card-body">
+                                <h5 class="card-title fs-6 text-center">Generators by Age</h5>
+                                <div id="barChart" class="chart-container" style="height: 100px;"></div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="col-md-4">
+                        <div class="card chart-card" data-chart-id="barChartOne" data-chart-title="Generators by Actual Run Hours">
+                            <div class="card-body">
+                                <h5 class="card-title fs-6 text-center">Generators by Actual RHrs</h5>
+                                <div id="barChartOne" class="chart-container" style="height: 100px;"></div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- GENERATOR BY OPERATION TIME -->
+                    <div class="col-md-4">
+                        <div class="card chart-card" data-chart-id="polarAreaChart" data-chart-title="Generators by %age Operation Time">
+                            <div class="card-body">
+                                <h5 class="card-title fs-6 text-center">Generators by %age Operation Time</h5>
+                                <div id="polarAreaChart" class="chart-container" style="height: 100px;"></div>
+                            </div>
+                        </div>
+                    </div>
+
+                </div>
+
+                <div class="row">
+                    <!-- GENERATOR BY CAPACITY -->
+                    <div class="col-md-6">
+                        <div class="card chart-card" data-chart-id="radarChart" data-chart-title="Generators by Capacity">
+                            <div class="card-body">
+                                <h5 class="card-title fs-6 text-center">Generators by Capacity</h5>
+                                <div id="radarChart" class="chart-container" style="height: 150px;"></div>
+                            </div>
+                        </div>
+                    </div>
+                    <!-- Generator By Brand -->
+                    <div class="col-md-6">
+                        <div class="card chart-card" data-chart-id="radarChartOne" data-chart-title="Generators by Brand">
+                            <div class="card-body">
+                                <h5 class="card-title fs-6 text-center">Generators by Brand</h5>
+                                <div id="radarChartOne" class="chart-container" style="height: 150px;"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+</main>
+
+
+<!-- ======= Footer ======= -->
+<?php include('footer.php'); ?>
+
+<script>
+    document.addEventListener("DOMContentLoaded", () => {
+        // Store chart instances
+        const chartInstances = {};
+
+        // Modal elements
+        const modal = document.getElementById('chartModal');
+        const modalTitle = document.getElementById('modalTitle');
+        const expandedChartContainer = document.getElementById('expandedChart');
+        const closeBtn = document.querySelector('.close-modal');
+
+        // Close modal when clicking the X
+        closeBtn.onclick = function() {
+            modal.style.display = "none";
+        }
+
+        // Close modal when clicking outside
+        window.onclick = function(event) {
+            if (event.target == modal) {
+                modal.style.display = "none";
+            }
+        }
+
+        // Initialize all charts
+
+        // Bar Chart - Generators by Age
+        initializeBarChart();
+
+        // Bar Chart - Generators by Actual Run Hours
+        initializeBarChartOne();
+
+        // Polar Area Chart - Generators by Operation Time
+        initializePieChart();
+
+        // Radar Chart - Generators by Capacity
+        initializeRadarChart();
+
+        // Radar Chart - Generators by Brand
+        initializeRadarChartOne();
+
+        // Add click event to all chart cards
+        document.querySelectorAll('.chart-card').forEach(card => {
+            card.addEventListener('click', function() {
+                const chartId = this.getAttribute('data-chart-id');
+                const chartTitle = this.getAttribute('data-chart-title');
+
+                // Set modal title
+                modalTitle.textContent = chartTitle;
+
+                // Show modal
+                modal.style.display = "block";
+
+                // Create expanded chart
+                createExpandedChart(chartId);
+            });
+        });
+
+        // Function to create expanded chart
+        function createExpandedChart(chartId) {
+            // First destroy any existing chart instance
+            if (window.expandedChartInstance) {
+                window.expandedChartInstance.destroy();
+                window.expandedChartInstance = null;
+            }
+
+            // Clear previous chart completely
+            expandedChartContainer.innerHTML = '';
+
+            // Show modal first
+            modal.style.display = "block";
+
+            // Slight delay to ensure modal is visible before chart rendering
+            setTimeout(() => {
+                // Create new chart based on original chart type
+                switch (chartId) {
+                    case 'barChart':
+                        window.expandedChartInstance = createExpandedBarChart();
+                        break;
+                    case 'barChartOne':
+                        window.expandedChartInstance = createExpandedBarChartOne();
+                        break;
+                    case 'radarChart':
+                        window.expandedChartInstance = createExpandedRadarChart();
+                        break;
+                    case 'polarAreaChart':
+                        window.expandedChartInstance = createExpandedPolarAreaChart();
+                        break;
+                    case 'radarChartOne':
+                        window.expandedChartInstance = createExpandedRadarChartOne();
+                        break;
+                }
+            }, 50); // Short delay to ensure DOM is ready
+        }
+        // Functions to create expanded charts
+        function createExpandedBarChart() {
+            const barChartData = <?php echo $barChartDataJson; ?>;
+            const categories = barChartData.map(item => item.category);
+            const values = barChartData.map(item => item.count);
+
+            const chart = new ApexCharts(expandedChartContainer, {
+                chart: {
+                    type: 'bar',
+                    height: 500,
+                    events: {
+                        dataPointSelection: function(event, chartContext, config) {
+                            const selectedCategory = categories[config.dataPointIndex];
+                            window.location.href = `generators-by-age.php?category=${encodeURIComponent(selectedCategory)}`;
+                        }
+                    }
+                },
+                series: [{
+                    name: 'Number of Generators',
+                    data: values
+                }],
+                xaxis: {
+                    categories: categories
+                },
+                yaxis: {
+                    tickAmount: Math.ceil(Math.max(...values) / 200),
+                    labels: {
+                        formatter: function(val) {
+                            return val.toFixed(0);
+                        }
+                    }
+                },
+                colors: ['#007bff'],
+                plotOptions: {
+                    bar: {
+                        horizontal: false,
+                        columnWidth: '50%'
+                    }
+                },
+                dataLabels: {
+                    enabled: true
+                },
+                title: {
+                    // text: 'Detailed View - Generators by Age',
+                    align: 'center'
+                }
+            });
+
+            chart.render();
+            return chart; // Return the chart instance for further use
+        }
+
+        function createExpandedBarChartOne() {
+            const barChartData = <?php echo $barChartDataTwoJson; ?>;
+            const categories = barChartData.map(item => item.category);
+            const values = barChartData.map(item => item.count);
+
+            const chart = new ApexCharts(expandedChartContainer, {
+                chart: {
+                    type: 'bar',
+                    height: 500
+                },
+                series: [{
+                    name: 'Number of Generators',
+                    data: values
+                }],
+                xaxis: {
+                    categories: categories
+                },
+                yaxis: {
+                    tickAmount: Math.ceil(Math.max(...values) / 200),
+                    labels: {
+                        formatter: function(val) {
+                            return val.toFixed(0);
+                        }
+                    }
+                },
+                colors: ['#007bff'],
+                plotOptions: {
+                    bar: {
+                        horizontal: false,
+                        columnWidth: '50%'
+                    }
+                },
+                dataLabels: {
+                    enabled: true
+                },
+                title: {
+                    // text: 'Detailed View - Generators by Actual Run Hours',
+                    align: 'center'
+                }
+            });
+
+            chart.render();
+            return chart; // Return the chart instance for further use
+        }
+
+        function createExpandedRadarChart() {
+            const chartData = <?php echo $chartDataJson; ?>;
+            const labels = chartData.map(item => item.name);
+            const values = chartData.map(item => item.value);
+            const colors = chartData.map(item => item.color);
+
+            const chart = new ApexCharts(expandedChartContainer, {
+                chart: {
+                    height: 500,
+                    type: 'radar',
+                    toolbar: {
+                        show: true
+                    }
+                },
+                series: [{
+                    name: 'Generators',
+                    data: values
+                }],
+                labels: labels,
+                colors: [colors[0]],
+                plotOptions: {
+                    radar: {
+                        size: 200,
+                        polygons: {
+                            strokeColors: '#e9e9e9',
+                            fill: {
+                                colors: ['#f8f8f8', '#fff']
+                            }
+                        }
+                    }
+                },
+                markers: {
+                    size: 5,
+                    colors: ['#fff'],
+                    strokeColors: colors[0],
+                    strokeWidth: 2,
+                },
+                tooltip: {
+                    y: {
+                        formatter: function(val) {
+                            return val;
+                        }
+                    }
+                },
+                yaxis: {
+                    tickAmount: 5,
+                    labels: {
+                        formatter: function(val) {
+                            return val.toFixed(0);
+                        }
+                    }
+                },
+                title: {
+                    // text: 'Detailed View - Generators by Capacity',
+                    align: 'center'
+                }
+            });
+
+            chart.render();
+            return chart; // Return the chart instance for further use
+        }
+
+        function createExpandedPolarAreaChart() {
+            const chartLabels = <?php echo $chartLabelsJson; ?>;
+            const chartValues = <?php echo $chartValuesJson; ?>;
+            const chartColors = <?php echo $chartColorsJson; ?>;
+
+            const chart = new ApexCharts(expandedChartContainer, {
+                chart: {
+                    type: 'polarArea',
+                    height: 500,
+                    toolbar: {
+                        show: true
+                    }
+                },
+                series: chartValues,
+                labels: chartLabels,
+                stroke: {
+                    colors: ['#ffffff'],
+                    width: 2
+                },
+                fill: {
+                    opacity: 0.85
+                },
+                colors: chartColors,
+                tooltip: {
+                    y: {
+                        formatter: function(val, {
+                            seriesIndex
+                        }) {
+                            return `Generators: ${val} (at ${chartLabels[seriesIndex]})`;
+                        }
+                    }
+                },
+                plotOptions: {
+                    polarArea: {
+                        rings: {
+                            strokeWidth: 1
+                        },
+                        spokes: {
+                            strokeWidth: 1
+                        }
+                    }
+                },
+                legend: {
+                    position: 'bottom'
+                },
+                title: {
+                    // text: 'Detailed View - Generators by %age Operation Time',
+                    align: 'center'
+                }
+            });
+
+            chart.render();
+            return chart; // Return the chart instance for further use
+        }
+
+        function createExpandedRadarChartOne() {
+            const pieChartData = <?php echo isset($pieChartDataJson) ? $pieChartDataJson : '[]'; ?>;
+
+            if (!pieChartData || !Array.isArray(pieChartData) || pieChartData.length === 0) {
+                console.error("No valid chart data available.");
+                return;
+            }
+
+            const labels = pieChartData.map(item => item.name);
+            const values = pieChartData.map(item => item.value);
+            const colors = pieChartData.map(item => item.color);
+
+            const chart = new ApexCharts(expandedChartContainer, {
+                chart: {
+                    height: 500,
+                    type: 'radar',
+                    toolbar: {
+                        show: true
+                    }
+                },
+                series: [{
+                    name: 'Generators',
+                    data: values
+                }],
+                labels: labels,
+                colors: colors.length > 0 ? colors : ['#FF5733'],
+                plotOptions: {
+                    radar: {
+                        size: 200,
+                        polygons: {
+                            strokeColors: '#e9e9e9',
+                            fill: {
+                                colors: ['#f8f8f8', '#fff']
+                            }
+                        }
+                    }
+                },
+                markers: {
+                    size: 5,
+                    colors: ['#fff'],
+                    strokeColors: colors[0] || '#FF5733',
+                    strokeWidth: 2
+                },
+                tooltip: {
+                    y: {
+                        formatter: function(val) {
+                            return val;
+                        }
+                    }
+                },
+                yaxis: {
+                    tickAmount: 5,
+                    labels: {
+                        formatter: function(val) {
+                            return val.toFixed(0);
+                        }
+                    }
+                },
+                title: {
+                    // text: 'Detailed View - Generators by Brand',
+                    align: 'center'
+                }
+            });
+
+            chart.render();
+            return chart; // Return the chart instance for further use
+        }
+
+        // Functions to initialize original charts with smaller size
+        function initializeBarChart() {
+            const barChartData = <?php echo $barChartDataJson; ?>;
+            const categories = barChartData.map(item => item.category);
+            const values = barChartData.map(item => item.count);
+
+            const chart = new ApexCharts(document.querySelector("#barChart"), {
+                chart: {
+                    type: 'bar',
+                    height: 180,
+                    toolbar: {
+                        show: false
+                    }
+                },
+                series: [{
+                    name: 'Number of Generators',
+                    data: values
+                }],
+                xaxis: {
+                    categories: categories,
+                    labels: {
+                        style: {
+                            fontSize: '8px'
+                        }
+                    }
+                },
+                yaxis: {
+                    labels: {
+                        formatter: function(val) {
+                            return val.toFixed(0);
+                        },
+                        style: {
+                            fontSize: '8px'
+                        }
+                    }
+                },
+                colors: ['#007bff'],
+                plotOptions: {
+                    bar: {
+                        horizontal: false,
+                        columnWidth: '50%'
+                    }
+                },
+                dataLabels: {
+                    enabled: false
+                }
+            });
+
+            chart.render();
+            chartInstances['barChart'] = chart;
+        }
+
+        function initializeBarChartOne() {
+            const barChartData = <?php echo $barChartDataTwoJson; ?>;
+            const categories = barChartData.map(item => item.category);
+            const values = barChartData.map(item => item.count);
+
+            const chart = new ApexCharts(document.querySelector("#barChartOne"), {
+                chart: {
+                    type: 'bar',
+                    height: 180,
+                    toolbar: {
+                        show: false
+                    }
+                },
+                series: [{
+                    name: 'Number of Generators',
+                    data: values
+                }],
+                xaxis: {
+                    categories: categories,
+                    labels: {
+                        style: {
+                            fontSize: '8px'
+                        }
+                    }
+                },
+                yaxis: {
+                    labels: {
+                        formatter: function(val) {
+                            return val.toFixed(0);
+                        },
+                        style: {
+                            fontSize: '8px'
+                        }
+                    }
+                },
+                colors: ['#007bff'],
+                plotOptions: {
+                    bar: {
+                        horizontal: false,
+                        columnWidth: '50%'
+                    }
+                },
+                dataLabels: {
+                    enabled: false
+                }
+            });
+
+            chart.render();
+            chartInstances['barChartOne'] = chart;
+        }
+
+        function initializePolarAreaChart() {
+            const chartLabels = <?php echo $chartLabelsJson; ?>;
+            const chartValues = <?php echo $chartValuesJson; ?>;
+            const chartColors = <?php echo $chartColorsJson; ?>;
+
+            const chart = new ApexCharts(document.querySelector("#polarAreaChart"), {
+                chart: {
+                    type: 'polarArea',
+                    height: 195,
+                    toolbar: {
+                        show: false
+                    }
+                },
+                series: chartValues,
+                labels: chartLabels,
+                stroke: {
+                    colors: ['#ffffff'],
+                    width: 1
+                },
+                fill: {
+                    opacity: 0.85
+                },
+                colors: chartColors,
+                legend: {
+                    show: false
+                },
+                plotOptions: {
+                    polarArea: {
+                        rings: {
+                            strokeWidth: 1
+                        },
+                        spokes: {
+                            strokeWidth: 1
+                        }
+                    }
+                }
+            });
+
+            chart.render();
+            chartInstances['polarAreaChart'] = chart;
+        }
+
+        function initializeRadarChart() {
+            const chartData = <?php echo $chartDataJson; ?>;
+            const labels = chartData.map(item => item.name);
+            const values = chartData.map(item => item.value);
+            const colors = chartData.map(item => item.color);
+
+            const chart = new ApexCharts(document.querySelector("#radarChart"), {
+                chart: {
+                    height: 180,
+                    type: 'radar',
+                    toolbar: {
+                        show: false
+                    }
+                },
+                series: [{
+                    name: 'Generators',
+                    data: values
+                }],
+                labels: labels.map(label => {
+                    // Shorten labels for small view
+                    const parts = label.split(':');
+                    return parts[0];
+                }),
+                colors: [colors[0]],
+                plotOptions: {
+                    radar: {
+                        size: 70,
+                        polygons: {
+                            strokeColors: '#e9e9e9',
+                            fill: {
+                                colors: ['#f8f8f8', '#fff']
+                            }
+                        }
+                    }
+                },
+                markers: {
+                    size: 1,
+                    colors: ['#fff'],
+                    strokeColors: colors[0],
+                    strokeWidth: 1,
+                },
+                yaxis: {
+                    show: false
+                },
+                dataLabels: {
+                    enabled: false
+                }
+            });
+
+            chart.render();
+            chartInstances['radarChart'] = chart;
+        }
+
+        function initializeRadarChartOne() {
+            const pieChartData = <?php echo isset($pieChartDataJson) ? $pieChartDataJson : '[]'; ?>;
+
+            if (!pieChartData || !Array.isArray(pieChartData) || pieChartData.length === 0) {
+                console.error("No valid chart data available.");
+                return;
+            }
+
+            const labels = pieChartData.map(item => item.name);
+            const values = pieChartData.map(item => item.value);
+            const colors = pieChartData.map(item => item.color);
+
+            const chart = new ApexCharts(document.querySelector("#radarChartOne"), {
+                chart: {
+                    height: 180,
+                    type: 'radar',
+                    toolbar: {
+                        show: false
+                    }
+                },
+                series: [{
+                    name: 'Generators',
+                    data: values
+                }],
+                labels: labels.map(label => {
+                    // Shorten labels for small view
+                    const parts = label.split('(');
+                    return parts[0];
+                }),
+                colors: colors.length > 0 ? colors : ['#FF5733'],
+                plotOptions: {
+                    radar: {
+                        size: 70,
+                        polygons: {
+                            strokeColors: '#e9e9e9',
+                            fill: {
+                                colors: ['#f8f8f8', '#fff']
+                            }
+                        }
+                    }
+                },
+                markers: {
+                    size: 1,
+                    colors: ['#fff'],
+                    strokeColors: colors[0] || '#FF5733',
+                    strokeWidth: 1
+                },
+                yaxis: {
+                    show: false
+                },
+                dataLabels: {
+                    enabled: false
+                }
+            });
+
+            chart.render();
+            chartInstances['radarChartOne'] = chart;
+        }
+    });
+</script>

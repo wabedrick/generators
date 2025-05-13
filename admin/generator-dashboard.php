@@ -4,7 +4,7 @@ session_start();
 if (!isset($_SESSION["username"])) {
     header('location: ../index.php');
 }
-include('header_aside.php');
+include 'header_aside.php';
 
 // total number of sites
 $sql1 = "SELECT COUNT(*) AS number_of_generators FROM generators";
@@ -240,20 +240,50 @@ $chartColorsJson = json_encode($chartColors);
 
 ?>
 
-
 <style>
     /* Add some custom styles to make the chart container look better */
     .chart-container {
-
         margin: 0 auto;
+        padding: 10px;
+        border-radius: 10px;
+        cursor: pointer;
+        /* Add pointer cursor to indicate clickable */
+    }
+
+    .modal {
+        display: none;
+        position: fixed;
+        z-index: 1050;
+        left: 0;
+        top: 0;
+        width: 100%;
+        height: 100%;
+        overflow: auto;
+        background-color: rgba(0, 0, 0, 0.7);
+    }
+
+    .modal-content {
+        background-color: #fefefe;
+        margin: 5% auto;
         padding: 20px;
-        /* background-color: #f4f4f4;  */
+        border: 1px solid #888;
+        width: 80%;
         border-radius: 10px;
     }
 
-    canvas {
-        max-height: 500px;
-        /* Increase the chart height */
+    .close-modal {
+        color: #aaa;
+        float: right;
+        font-size: 28px;
+        font-weight: bold;
+        cursor: pointer;
+    }
+
+    .close-modal:hover,
+    .close-modal:focus {
+        color: black;
+        text-decoration: none;
+        cursor: pointer;
     }
 
     .on-id-hoover {
@@ -264,12 +294,38 @@ $chartColorsJson = json_encode($chartColors);
         color: grey;
         text-decoration: underline;
     }
+
+    /* Make chart containers smaller and clickable */
+    .chart-card {
+        transition: transform 0.3s;
+        cursor: pointer;
+    }
+
+    .chart-card:hover {
+        transform: scale(1.02);
+    }
+
+    #pieChart {
+        min-height: 195px;
+        background: #f5f5f5;
+    }
+
+    /* #pieChart {
+        border: 2px solid red;
+    } */
 </style>
-<!-- Main Content -->
+
+<div id="chartModal" class="modal">
+    <div class="modal-content">
+        <span class="close-modal">&times;</span>
+        <h5 id="modalTitle" class="card-title fs-6 text-center"></h5>
+        <div id="expandedChart" style="height: 500px;"></div>
+    </div>
+</div>
+
 <!-- Add this code inside your main dashboard section -->
 <main id="main" class="main">
-
-    <!-- align pagetitle on the left and button on the right -->
+    <!-- Your existing header code remains the same -->
     <div class="d-flex justify-content-between">
         <div class="pagetitle float-left">
             <h1>Generators Dashboard</h1>
@@ -279,8 +335,7 @@ $chartColorsJson = json_encode($chartColors);
                     <li class="breadcrumb-item active">Generators Dashboard</li>
                 </ol>
             </nav>
-        </div><!-- End Page Title -->
-        <!-- middle div for indicating the period being viewed -->
+        </div>
         <div class="period">
             <h4 class="text-muted">Today</h4>
         </div>
@@ -291,12 +346,9 @@ $chartColorsJson = json_encode($chartColors);
             <!-- Total Number of Sites Card -->
             <div class="col-xxl-2 col-md-2">
                 <div class="card info-card revenue-card">
-
                     <div class="card-body">
                         <h5 class="card-title fs-6 text-center">Generators</h5>
-
                         <div>
-
                             <a href="view-all-generators.php" class="card-link">
                                 <div class="card align-items-center p-2" style="width:auto; height:4rem">
                                     <p><span class="fs-6 text-primary pt-4">Total</span>
@@ -304,7 +356,6 @@ $chartColorsJson = json_encode($chartColors);
                                     </p>
                                 </div>
                             </a>
-
                         </div>
 
                         <a href="view-generators-on-status.php?status=Operational" class="card-link">
@@ -330,377 +381,701 @@ $chartColorsJson = json_encode($chartColors);
                                 </p>
                             </div>
                         </a>
-
-                    </div>
-                </div>
-
-            </div>
-
-            <div class="col-md-5">
-                <div class="card">
-                    <div class="card-body">
-                        <h5 class="card-title fs-6 text-center">Generators by Age</h5>
-                        <div id="barChart"></div>
-                        <script src="https://cdn.jsdelivr.net/npm/apexcharts"></script>
-                        <script>
-                            document.addEventListener("DOMContentLoaded", () => {
-                                // Get the data from PHP
-                                const barChartData = <?php echo $barChartDataJson; ?>;
-
-                                // Debugging: Check data in browser console
-                                console.log("Bar Chart Data:", barChartData);
-
-                                // Extract categories (labels) and values
-                                const categories = barChartData.map(item => item.category);
-                                const values = barChartData.map(item => item.count);
-
-                                // Initialize the bar chart
-                                const chart = new ApexCharts(document.querySelector("#barChart"), {
-                                    chart: {
-                                        type: 'bar',
-                                        height: 355
-                                    },
-                                    series: [{
-                                        name: 'Number of Generators',
-                                        data: values
-                                    }],
-                                    xaxis: {
-                                        categories: categories
-                                    },
-                                    yaxis: {
-                                        tickAmount: Math.ceil(Math.max(...values) / 200), // Ensure ticks are spaced by 200
-                                        labels: {
-                                            formatter: function(val) {
-                                                return val.toFixed(0); // Ensure whole numbers
-                                            }
-                                        }
-                                    },
-                                    colors: ['#007bff'], // Bar color
-                                    plotOptions: {
-                                        bar: {
-                                            horizontal: false,
-                                            columnWidth: '50%'
-                                        }
-                                    }
-                                });
-
-                                // Render the chart
-                                chart.render();
-                            });
-                        </script>
                     </div>
                 </div>
             </div>
 
-            <div class="col-md-5">
-                <div class="card">
-                    <div class="card-body">
-                        <h5 class="card-title fs-6 text-center">Generators by Actual RHrs</h5>
-                        <div id="barChartOne"></div>
+            <div class="col-md-10">
+                <div class="row">
+                    <div class="col-md-4">
+                        <div class="card chart-card" data-chart-id="barChart" data-chart-title="Generators by Age">
+                            <div class="card-body">
+                                <h5 class="card-title fs-6 text-center">Generators by Age</h5>
+                                <div id="barChart" class="chart-container" style="height: 100px;"></div>
+                            </div>
+                        </div>
+                    </div>
 
-                        <script>
-                            document.addEventListener("DOMContentLoaded", () => {
-                                // Get the data from PHP
-                                const barChartData = <?php echo $barChartDataTwoJson; ?>;
+                    <div class="col-md-4">
+                        <div class="card chart-card" data-chart-id="barChartOne" data-chart-title="Generators by Actual Run Hours">
+                            <div class="card-body">
+                                <h5 class="card-title fs-6 text-center">Generators by Actual RHrs</h5>
+                                <div id="barChartOne" class="chart-container" style="height: 100px;"></div>
+                            </div>
+                        </div>
+                    </div>
 
-                                // Debugging: Check data in browser console
-                                console.log("Bar Chart Data:", barChartData);
+                    <!-- GENERATOR BY OPERATION TIME -->
+                    <div class="col-md-4">
+                        <div class="card chart-card" data-chart-id="polarAreaChart" data-chart-title="Generators by %age Operation Time">
+                            <div class="card-body">
+                                <h5 class="card-title fs-6 text-center">Generators by %age Operation Time</h5>
+                                <div id="polarAreaChart" class="chart-container" style="height: 100px;"></div>
+                            </div>
+                        </div>
+                    </div>
 
-                                // Extract categories (labels) and values
-                                const categories = barChartData.map(item => item.category);
-                                const values = barChartData.map(item => item.count);
+                </div>
 
-                                // Initialize the bar chart
-                                const chart = new ApexCharts(document.querySelector("#barChartOne"), {
-                                    chart: {
-                                        type: 'bar',
-                                        height: 355
-                                    },
-                                    series: [{
-                                        name: 'Number of Generators',
-                                        data: values
-                                    }],
-                                    xaxis: {
-                                        categories: categories
-                                    },
-                                    yaxis: {
-                                        tickAmount: Math.ceil(Math.max(...values) / 200), // Ensure ticks are spaced by 200
-                                        labels: {
-                                            formatter: function(val) {
-                                                return val.toFixed(0); // Ensure whole numbers
-                                            }
-                                        }
-                                    },
-                                    colors: ['#007bff'], // Bar color
-                                    plotOptions: {
-                                        bar: {
-                                            horizontal: false,
-                                            columnWidth: '50%'
-                                        }
-                                    }
-                                });
-
-                                // Render the chart
-                                chart.render();
-                            });
-                        </script>
+                <div class="row">
+                    <!-- GENERATOR BY CAPACITY -->
+                    <div class="col-md-6">
+                        <div class="card chart-card" data-chart-id="radarChart" data-chart-title="Generators by Capacity">
+                            <div class="card-body">
+                                <h5 class="card-title fs-6 text-center">Generators by Capacity</h5>
+                                <div id="radarChart" class="chart-container" style="height: 150px;"></div>
+                            </div>
+                        </div>
+                    </div>
+                    <!-- Generator By Brand -->
+                    <div class="col-md-6">
+                        <div class="card chart-card" data-chart-id="radarChartOne" data-chart-title="Generators by Brand">
+                            <div class="card-body">
+                                <h5 class="card-title fs-6 text-center">Generators by Brand</h5>
+                                <div id="radarChartOne" class="chart-container" style="height: 150px;"></div>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
-
-        </div><!-- End Total Number of Sites Card -->
-
-        <!-- GENERATOR BY CAPACITY -->
-        <div class="col-md">
-            <div class="card">
-                <div class="card-body">
-                    <h5 class="card-title fs-6 text-center">
-                        Generators by Capacity
-                    </h5>
-                    <div id="radarChart"></div>
-                    <script>
-                        document.addEventListener("DOMContentLoaded", () => {
-                            // Use PHP-generated JSON data
-                            const chartData = <?php echo $chartDataJson; ?>;
-
-                            // Debug: Log the chart data to the console
-                            console.log("Chart Data:", chartData);
-
-                            // Extract labels, values, and colors from chartData
-                            const labels = chartData.map(item => item.name); // Labels (e.g., "10 KW/DC (4, 10.00%)")
-                            const values = chartData.map(item => item.value); // Values (e.g., 4)
-                            const colors = chartData.map(item => item.color); // Colors (e.g., "#FF0000")
-
-                            // Debug: Log the extracted labels, values, and colors
-                            console.log("Labels:", labels);
-                            console.log("Values:", values);
-                            console.log("Colors:", colors);
-
-                            // Initialize the radar chart
-                            const chart = new ApexCharts(document.querySelector("#radarChart"), {
-                                chart: {
-                                    height: 440,
-                                    type: 'radar',
-                                    toolbar: {
-                                        show: true
-                                    }
-                                },
-                                series: [{
-                                    name: 'Generators',
-                                    data: values // Use the values for the radar chart
-                                }],
-                                labels: labels, // Use the labels for the radar chart (includes value and percentage)
-                                colors: [colors[0]], // Use the first color for the radar chart (or customize as needed)
-                                plotOptions: {
-                                    radar: {
-                                        size: 200,
-                                        polygons: {
-                                            strokeColors: '#e9e9e9',
-                                            fill: {
-                                                colors: ['#f8f8f8', '#fff']
-                                            }
-                                        }
-                                    }
-                                },
-                                markers: {
-                                    size: 4,
-                                    colors: ['#fff'],
-                                    strokeColors: colors[0], // Use the first color for the markers
-                                    strokeWidth: 2,
-                                },
-                                tooltip: {
-                                    y: {
-                                        formatter: function(val) {
-                                            return val; // Display the raw value in the tooltip
-                                        }
-                                    }
-                                },
-                                yaxis: {
-                                    tickAmount: 5, // Number of ticks on the y-axis
-                                    labels: {
-                                        formatter: function(val) {
-                                            return val.toFixed(0); // Display whole numbers on the y-axis
-                                        }
-                                    }
-                                }
-                            });
-
-                            // Render the chart
-                            chart.render();
-                        });
-                    </script>
-                </div>
-            </div>
         </div>
-
-        <!-- GENERATOR BY OPERATION TIME -->
-        <div class="col-md">
-            <div class="card">
-                <div class="card-body">
-                    <h5 class="card-title fs-6 text-center">Generators by %age Operation Time</h5>
-
-                    <!-- Line Chart Container -->
-                    <div id="polarAreaChart"></div>
-
-                    <script>
-                        document.addEventListener("DOMContentLoaded", () => {
-                            // Get PHP-generated JSON data
-                            const chartLabels = <?php echo $chartLabelsJson; ?>;
-                            const chartValues = <?php echo $chartValuesJson; ?>;
-                            const chartColors = <?php echo $chartColorsJson; ?>;
-
-                            // Initialize the Polar Area Chart
-                            const chart = new ApexCharts(document.querySelector("#polarAreaChart"), {
-                                chart: {
-                                    type: 'polarArea',
-                                    height: 420,
-                                    toolbar: {
-                                        show: true
-                                    }
-                                },
-                                series: chartValues, // Data values (Number of Generators)
-                                labels: chartLabels, // Labels (Percentage Operation Time)
-                                stroke: {
-                                    colors: ['#ffffff'], // White border between segments
-                                    width: 2
-                                },
-                                fill: {
-                                    opacity: 0.85 // Transparency effect
-                                },
-                                colors: chartColors, // Assign unique colors
-                                tooltip: {
-                                    y: {
-                                        formatter: function(val, {
-                                            seriesIndex
-                                        }) {
-                                            return `Generators: ${val} (at ${chartLabels[seriesIndex]})`;
-                                        }
-                                    }
-                                },
-                                plotOptions: {
-                                    polarArea: {
-                                        rings: {
-                                            strokeWidth: 1
-                                        },
-                                        spokes: {
-                                            strokeWidth: 1
-                                        }
-                                    }
-                                },
-                                legend: {
-                                    position: 'bottom'
-                                }
-                            });
-
-                            // Render the chart
-                            chart.render();
-
-                            // Change cursor to pointer on hover
-                            document.querySelector("#lineChart").style.cursor = "pointer";
-                        });
-                    </script>
-                    <!-- End Line Chart -->
-                </div>
-            </div>
-        </div>
-
-        <div class="col-md">
-            <div class="card">
-                <div class="card-body">
-                    <h5 class="card-title fs-6 text-center">
-                        Generators by Brand
-                    </h5>
-                    <div id="radarChartOne"></div>
-                    <script>
-                        document.addEventListener("DOMContentLoaded", () => {
-                            // Use PHP-generated JSON data
-                            const pieChartData = <?php echo isset($pieChartDataJson) ? $pieChartDataJson : '[]'; ?>;
-
-                            // Debug: Log the chart data to the console
-                            console.log("Chart Data:", pieChartData);
-
-                            // Validate data
-                            if (!pieChartData || !Array.isArray(pieChartData) || pieChartData.length === 0) {
-                                console.error("No valid chart data available.");
-                                return;
-                            }
-
-                            // Extract labels, values, and colors
-                            const labels = pieChartData.map(item => item.name);
-                            const values = pieChartData.map(item => item.value);
-                            const colors = pieChartData.map(item => item.color);
-
-                            console.log("Labels:", labels);
-                            console.log("Values:", values);
-                            console.log("Colors:", colors);
-
-                            // Initialize the radar chart
-                            const chart = new ApexCharts(document.querySelector("#radarChartOne"), {
-                                chart: {
-                                    height: 440,
-                                    type: 'radar',
-                                    toolbar: {
-                                        show: true
-                                    }
-                                },
-                                series: [{
-                                    name: 'Generators',
-                                    data: values
-                                }],
-                                labels: labels,
-                                colors: colors.length > 0 ? colors : ['#FF5733'],
-                                plotOptions: {
-                                    radar: {
-                                        size: 200,
-                                        polygons: {
-                                            strokeColors: '#e9e9e9',
-                                            fill: {
-                                                colors: ['#f8f8f8', '#fff']
-                                            }
-                                        }
-                                    }
-                                },
-                                markers: {
-                                    size: 4,
-                                    colors: ['#fff'],
-                                    strokeColors: colors[0] || '#FF5733',
-                                    strokeWidth: 2
-                                },
-                                tooltip: {
-                                    y: {
-                                        formatter: function(val) {
-                                            return val;
-                                        }
-                                    }
-                                },
-                                yaxis: {
-                                    tickAmount: 5,
-                                    labels: {
-                                        formatter: function(val) {
-                                            return val.toFixed(0);
-                                        }
-                                    }
-                                }
-                            });
-
-                            // Render the chart
-                            chart.render();
-                        });
-                    </script>
-
-                </div>
-            </div>
-        </div>
-
-        </div>
-        </div>
-        </div>
-
-        </div>
-
     </section>
+</main>
 
-</main><!-- End #main -->
 
 <!-- ======= Footer ======= -->
 <?php include('footer.php'); ?>
+
+<script>
+    document.addEventListener("DOMContentLoaded", () => {
+        // Store chart instances
+        const chartInstances = {};
+
+        // Modal elements
+        const modal = document.getElementById('chartModal');
+        const modalTitle = document.getElementById('modalTitle');
+        const expandedChartContainer = document.getElementById('expandedChart');
+        const closeBtn = document.querySelector('.close-modal');
+
+        // Close modal when clicking the X
+        closeBtn.onclick = function() {
+            modal.style.display = "none";
+        }
+
+        // Close modal when clicking outside
+        window.onclick = function(event) {
+            if (event.target == modal) {
+                modal.style.display = "none";
+            }
+        }
+
+        // Initialize all charts
+
+        // Bar Chart - Generators by Age
+        initializeBarChart();
+
+        // Bar Chart - Generators by Actual Run Hours
+        initializeBarChartOne();
+
+        // Polar Area Chart - Generators by Operation Time
+        initializePolarAreaChart();
+
+        // Radar Chart - Generators by Capacity
+        initializeRadarChart();
+
+        // Radar Chart - Generators by Brand
+        initializeRadarChartOne();
+
+        // Add click event to all chart cards
+        document.querySelectorAll('.chart-card').forEach(card => {
+            card.addEventListener('click', function() {
+                const chartId = this.getAttribute('data-chart-id');
+                const chartTitle = this.getAttribute('data-chart-title');
+
+                // Set modal title
+                modalTitle.textContent = chartTitle;
+
+                // Show modal
+                modal.style.display = "block";
+
+                // Create expanded chart
+                createExpandedChart(chartId);
+            });
+        });
+
+        // Function to create expanded chart
+        function createExpandedChart(chartId) {
+            // First destroy any existing chart instance
+            if (window.expandedChartInstance) {
+                window.expandedChartInstance.destroy();
+                window.expandedChartInstance = null;
+            }
+
+            // Clear previous chart completely
+            expandedChartContainer.innerHTML = '';
+
+            // Show modal first
+            modal.style.display = "block";
+
+            // Slight delay to ensure modal is visible before chart rendering
+            setTimeout(() => {
+                // Create new chart based on original chart type
+                switch (chartId) {
+                    case 'barChart':
+                        window.expandedChartInstance = createExpandedBarChart();
+                        break;
+                    case 'barChartOne':
+                        window.expandedChartInstance = createExpandedBarChartOne();
+                        break;
+                    case 'radarChart':
+                        window.expandedChartInstance = createExpandedRadarChart();
+                        break;
+                    case 'polarAreaChart':
+                        window.expandedChartInstance = createExpandedPolarAreaChart();
+                        break;
+                    case 'radarChartOne':
+                        window.expandedChartInstance = createExpandedRadarChartOne();
+                        break;
+                }
+            }, 50); // Short delay to ensure DOM is ready
+        }
+        // Functions to create expanded charts
+        function createExpandedBarChart() {
+            const barChartData = <?php echo $barChartDataJson; ?>;
+            const categories = barChartData.map(item => item.category);
+            const values = barChartData.map(item => item.count);
+
+            const chart = new ApexCharts(expandedChartContainer, {
+                chart: {
+                    type: 'bar',
+                    height: 500,
+                    events: {
+                        dataPointSelection: function(event, chartContext, config) {
+                            const selectedCategory = categories[config.dataPointIndex];
+                            window.location.href = `generators-by-age.php?category=${encodeURIComponent(selectedCategory)}`;
+                        }
+                    }
+                },
+                series: [{
+                    name: 'Number of Generators',
+                    data: values
+                }],
+                xaxis: {
+                    categories: categories
+                },
+                yaxis: {
+                    tickAmount: Math.ceil(Math.max(...values) / 200),
+                    labels: {
+                        formatter: function(val) {
+                            return val.toFixed(0);
+                        }
+                    }
+                },
+                colors: ['#007bff'],
+                plotOptions: {
+                    bar: {
+                        horizontal: false,
+                        columnWidth: '50%'
+                    }
+                },
+                dataLabels: {
+                    enabled: true
+                },
+                title: {
+                    // text: 'Detailed View - Generators by Age',
+                    align: 'center'
+                }
+            });
+
+            chart.render();
+            return chart; // Return the chart instance for further use
+        }
+
+        function createExpandedBarChartOne() {
+            const barChartData = <?php echo $barChartDataTwoJson; ?>;
+            const categories = barChartData.map(item => item.category);
+            const values = barChartData.map(item => item.count);
+
+            const chart = new ApexCharts(expandedChartContainer, {
+                chart: {
+                    type: 'bar',
+                    height: 500
+                },
+                series: [{
+                    name: 'Number of Generators',
+                    data: values
+                }],
+                xaxis: {
+                    categories: categories
+                },
+                yaxis: {
+                    tickAmount: Math.ceil(Math.max(...values) / 200),
+                    labels: {
+                        formatter: function(val) {
+                            return val.toFixed(0);
+                        }
+                    }
+                },
+                colors: ['#007bff'],
+                plotOptions: {
+                    bar: {
+                        horizontal: false,
+                        columnWidth: '50%'
+                    }
+                },
+                dataLabels: {
+                    enabled: true
+                },
+                title: {
+                    // text: 'Detailed View - Generators by Actual Run Hours',
+                    align: 'center'
+                }
+            });
+
+            chart.render();
+            return chart; // Return the chart instance for further use
+        }
+
+        function createExpandedRadarChart() {
+            const chartData = <?php echo $chartDataJson; ?>;
+            const labels = chartData.map(item => item.name);
+            const values = chartData.map(item => item.value);
+            const colors = chartData.map(item => item.color);
+
+            const chart = new ApexCharts(expandedChartContainer, {
+                chart: {
+                    height: 500,
+                    type: 'radar',
+                    toolbar: {
+                        show: true
+                    }
+                },
+                series: [{
+                    name: 'Generators',
+                    data: values
+                }],
+                labels: labels,
+                colors: [colors[0]],
+                plotOptions: {
+                    radar: {
+                        size: 200,
+                        polygons: {
+                            strokeColors: '#e9e9e9',
+                            fill: {
+                                colors: ['#f8f8f8', '#fff']
+                            }
+                        }
+                    }
+                },
+                markers: {
+                    size: 5,
+                    colors: ['#fff'],
+                    strokeColors: colors[0],
+                    strokeWidth: 2,
+                },
+                tooltip: {
+                    y: {
+                        formatter: function(val) {
+                            return val;
+                        }
+                    }
+                },
+                yaxis: {
+                    tickAmount: 5,
+                    labels: {
+                        formatter: function(val) {
+                            return val.toFixed(0);
+                        }
+                    }
+                },
+                title: {
+                    // text: 'Detailed View - Generators by Capacity',
+                    align: 'center'
+                }
+            });
+
+            chart.render();
+            return chart; // Return the chart instance for further use
+        }
+
+        function createExpandedPolarAreaChart() {
+            const chartLabels = <?php echo $chartLabelsJson; ?>;
+            const chartValues = <?php echo $chartValuesJson; ?>;
+            const chartColors = <?php echo $chartColorsJson; ?>;
+
+            const chart = new ApexCharts(expandedChartContainer, {
+                chart: {
+                    type: 'polarArea',
+                    height: 500,
+                    toolbar: {
+                        show: true
+                    }
+                },
+                series: chartValues,
+                labels: chartLabels,
+                stroke: {
+                    colors: ['#ffffff'],
+                    width: 2
+                },
+                fill: {
+                    opacity: 0.85
+                },
+                colors: chartColors,
+                tooltip: {
+                    y: {
+                        formatter: function(val, {
+                            seriesIndex
+                        }) {
+                            return `Generators: ${val} (at ${chartLabels[seriesIndex]})`;
+                        }
+                    }
+                },
+                plotOptions: {
+                    polarArea: {
+                        rings: {
+                            strokeWidth: 1
+                        },
+                        spokes: {
+                            strokeWidth: 1
+                        }
+                    }
+                },
+                legend: {
+                    position: 'bottom'
+                },
+                title: {
+                    // text: 'Detailed View - Generators by %age Operation Time',
+                    align: 'center'
+                }
+            });
+
+            chart.render();
+            return chart; // Return the chart instance for further use
+        }
+
+        function createExpandedRadarChartOne() {
+            const pieChartData = <?php echo isset($pieChartDataJson) ? $pieChartDataJson : '[]'; ?>;
+
+            if (!pieChartData || !Array.isArray(pieChartData) || pieChartData.length === 0) {
+                console.error("No valid chart data available.");
+                return;
+            }
+
+            const labels = pieChartData.map(item => item.name);
+            const values = pieChartData.map(item => item.value);
+            const colors = pieChartData.map(item => item.color);
+
+            const chart = new ApexCharts(expandedChartContainer, {
+                chart: {
+                    height: 500,
+                    type: 'radar',
+                    toolbar: {
+                        show: true
+                    }
+                },
+                series: [{
+                    name: 'Generators',
+                    data: values
+                }],
+                labels: labels,
+                colors: colors.length > 0 ? colors : ['#FF5733'],
+                plotOptions: {
+                    radar: {
+                        size: 200,
+                        polygons: {
+                            strokeColors: '#e9e9e9',
+                            fill: {
+                                colors: ['#f8f8f8', '#fff']
+                            }
+                        }
+                    }
+                },
+                markers: {
+                    size: 5,
+                    colors: ['#fff'],
+                    strokeColors: colors[0] || '#FF5733',
+                    strokeWidth: 2
+                },
+                tooltip: {
+                    y: {
+                        formatter: function(val) {
+                            return val;
+                        }
+                    }
+                },
+                yaxis: {
+                    tickAmount: 5,
+                    labels: {
+                        formatter: function(val) {
+                            return val.toFixed(0);
+                        }
+                    }
+                },
+                title: {
+                    // text: 'Detailed View - Generators by Brand',
+                    align: 'center'
+                }
+            });
+
+            chart.render();
+            return chart; // Return the chart instance for further use
+        }
+
+        // Functions to initialize original charts with smaller size
+        function initializeBarChart() {
+            const barChartData = <?php echo $barChartDataJson; ?>;
+            const categories = barChartData.map(item => item.category);
+            const values = barChartData.map(item => item.count);
+
+            const chart = new ApexCharts(document.querySelector("#barChart"), {
+                chart: {
+                    type: 'bar',
+                    height: 180,
+                    toolbar: {
+                        show: false
+                    }
+                },
+                series: [{
+                    name: 'Number of Generators',
+                    data: values
+                }],
+                xaxis: {
+                    categories: categories,
+                    labels: {
+                        style: {
+                            fontSize: '8px'
+                        }
+                    }
+                },
+                yaxis: {
+                    labels: {
+                        formatter: function(val) {
+                            return val.toFixed(0);
+                        },
+                        style: {
+                            fontSize: '8px'
+                        }
+                    }
+                },
+                colors: ['#007bff'],
+                plotOptions: {
+                    bar: {
+                        horizontal: false,
+                        columnWidth: '50%'
+                    }
+                },
+                dataLabels: {
+                    enabled: false
+                }
+            });
+
+            chart.render();
+            chartInstances['barChart'] = chart;
+        }
+
+        function initializeBarChartOne() {
+            const barChartData = <?php echo $barChartDataTwoJson; ?>;
+            const categories = barChartData.map(item => item.category);
+            const values = barChartData.map(item => item.count);
+
+            const chart = new ApexCharts(document.querySelector("#barChartOne"), {
+                chart: {
+                    type: 'bar',
+                    height: 180,
+                    toolbar: {
+                        show: false
+                    }
+                },
+                series: [{
+                    name: 'Number of Generators',
+                    data: values
+                }],
+                xaxis: {
+                    categories: categories,
+                    labels: {
+                        style: {
+                            fontSize: '8px'
+                        }
+                    }
+                },
+                yaxis: {
+                    labels: {
+                        formatter: function(val) {
+                            return val.toFixed(0);
+                        },
+                        style: {
+                            fontSize: '8px'
+                        }
+                    }
+                },
+                colors: ['#007bff'],
+                plotOptions: {
+                    bar: {
+                        horizontal: false,
+                        columnWidth: '50%'
+                    }
+                },
+                dataLabels: {
+                    enabled: false
+                }
+            });
+
+            chart.render();
+            chartInstances['barChartOne'] = chart;
+        }
+
+        function initializePolarAreaChart() {
+            const chartLabels = <?php echo $chartLabelsJson; ?>;
+            const chartValues = <?php echo $chartValuesJson; ?>;
+            const chartColors = <?php echo $chartColorsJson; ?>;
+
+            const chart = new ApexCharts(document.querySelector("#polarAreaChart"), {
+                chart: {
+                    type: 'polarArea',
+                    height: 195,
+                    toolbar: {
+                        show: false
+                    }
+                },
+                series: chartValues,
+                labels: chartLabels,
+                stroke: {
+                    colors: ['#ffffff'],
+                    width: 1
+                },
+                fill: {
+                    opacity: 0.85
+                },
+                colors: chartColors,
+                legend: {
+                    show: false
+                },
+                plotOptions: {
+                    polarArea: {
+                        rings: {
+                            strokeWidth: 1
+                        },
+                        spokes: {
+                            strokeWidth: 1
+                        }
+                    }
+                }
+            });
+
+            chart.render();
+            chartInstances['polarAreaChart'] = chart;
+        }
+
+        function initializeRadarChart() {
+            const chartData = <?php echo $chartDataJson; ?>;
+            const labels = chartData.map(item => item.name);
+            const values = chartData.map(item => item.value);
+            const colors = chartData.map(item => item.color);
+
+            const chart = new ApexCharts(document.querySelector("#radarChart"), {
+                chart: {
+                    height: 180,
+                    type: 'radar',
+                    toolbar: {
+                        show: false
+                    }
+                },
+                series: [{
+                    name: 'Generators',
+                    data: values
+                }],
+                labels: labels.map(label => {
+                    // Shorten labels for small view
+                    const parts = label.split(':');
+                    return parts[0];
+                }),
+                colors: [colors[0]],
+                plotOptions: {
+                    radar: {
+                        size: 70,
+                        polygons: {
+                            strokeColors: '#e9e9e9',
+                            fill: {
+                                colors: ['#f8f8f8', '#fff']
+                            }
+                        }
+                    }
+                },
+                markers: {
+                    size: 1,
+                    colors: ['#fff'],
+                    strokeColors: colors[0],
+                    strokeWidth: 1,
+                },
+                yaxis: {
+                    show: false
+                },
+                dataLabels: {
+                    enabled: false
+                }
+            });
+
+            chart.render();
+            chartInstances['radarChart'] = chart;
+        }
+
+        function initializeRadarChartOne() {
+            const pieChartData = <?php echo isset($pieChartDataJson) ? $pieChartDataJson : '[]'; ?>;
+
+            if (!pieChartData || !Array.isArray(pieChartData) || pieChartData.length === 0) {
+                console.error("No valid chart data available.");
+                return;
+            }
+
+            const labels = pieChartData.map(item => item.name);
+            const values = pieChartData.map(item => item.value);
+            const colors = pieChartData.map(item => item.color);
+
+            const chart = new ApexCharts(document.querySelector("#radarChartOne"), {
+                chart: {
+                    height: 180,
+                    type: 'radar',
+                    toolbar: {
+                        show: false
+                    }
+                },
+                series: [{
+                    name: 'Generators',
+                    data: values
+                }],
+                labels: labels.map(label => {
+                    // Shorten labels for small view
+                    const parts = label.split('(');
+                    return parts[0];
+                }),
+                colors: colors.length > 0 ? colors : ['#FF5733'],
+                plotOptions: {
+                    radar: {
+                        size: 70,
+                        polygons: {
+                            strokeColors: '#e9e9e9',
+                            fill: {
+                                colors: ['#f8f8f8', '#fff']
+                            }
+                        }
+                    }
+                },
+                markers: {
+                    size: 1,
+                    colors: ['#fff'],
+                    strokeColors: colors[0] || '#FF5733',
+                    strokeWidth: 1
+                },
+                yaxis: {
+                    show: false
+                },
+                dataLabels: {
+                    enabled: false
+                }
+            });
+
+            chart.render();
+            chartInstances['radarChartOne'] = chart;
+        }
+    });
+</script>

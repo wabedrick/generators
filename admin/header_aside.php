@@ -150,7 +150,7 @@
                 </a>
                 <ul id="forms-nav" class="nav-content collapse " data-bs-parent="#sidebar-nav">
                     <li>
-                        <a href="view-sites.php">
+                        <a href="view-all-sites.php">
                             <i class="bi bi-circle"></i><span>View All Sites</span>
                         </a>
                     </li>
@@ -169,8 +169,8 @@
                 </a>
                 <ul id="update-nav" class="nav-content collapse " data-bs-parent="#sidebar-nav">
                     <li>
-                        <a href="update_sites_table.php">
-                            <i class="bi bi-circle"></i><span>Sites Table</span>
+                        <a href="./bulk-import.php">
+                            <i class="bi bi-circle"></i><span>Update DB Table</span>
                         </a>
                     </li>
                     <li>
@@ -180,7 +180,7 @@
                     </li>
 
                 </ul>
-            </li><!-- End Loans Nav -->
+            </li>
         </ul>
 
     </aside>

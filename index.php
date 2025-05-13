@@ -1,5 +1,5 @@
 <?php
- include 'connection/db_connection.php';
+include 'connection/db_connection.php';
 session_start();
 ?>
 
@@ -124,42 +124,37 @@ session_start();
 <?php
 //  include 'connection/db_connection.php';
 
-if($_SERVER['REQUEST_METHOD'] ==='POST'){
-   
-    $username = mysqli_real_escape_string($conn,$_POST['username']);
-    $password =  mysqli_real_escape_string($conn,$_POST['password']);
-    // echo $password;
-    // exit();
-    // $password = md5($password);
-    $query1 = "SELECT *
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+
+  $username = mysqli_real_escape_string($conn, $_POST['username']);
+  $password =  mysqli_real_escape_string($conn, $_POST['password']);
+  // echo $password;
+  // exit();
+  // $password = md5($password);
+  $query1 = "SELECT *
      FROM users WHERE username = '$username' AND password = '$password' limit 1";
-    $result= mysqli_query($conn, $query1);
+  $result = mysqli_query($conn, $query1);
 
-    if(mysqli_num_rows($result)==1){
-     $user = mysqli_fetch_assoc($result);
-     $_SESSION["username"] = $_POST['username'];
-     $_SESSION["user_title"] = $user['user_title'];
-        
-        if($user['user_title'] == "admin"){
-        echo "<script>window.location.href = 'admin/dashboard.php';</script>";
-        exit();
+  if (mysqli_num_rows($result) == 1) {
+    $user = mysqli_fetch_assoc($result);
+    $_SESSION["username"] = $_POST['username'];
+    $_SESSION["user_title"] = $user['user_title'];
 
-        } elseif($user['title'] == "sub_admin"){
-        echo "<script>window.location.href = 'subadmin/dashboard.php';</script>";
-        exit();
-        
-        } elseif($user['title'] == "field_officer"){
+    if ($user['user_title'] == "admin") {
+      echo "<script>window.location.href = 'admin/dashboard.php';</script>";
+      exit();
+    } elseif ($user['title'] == "sub_admin") {
+      echo "<script>window.location.href = 'subadmin/dashboard.php';</script>";
+      exit();
+    } elseif ($user['title'] == "field_officer") {
 
-        echo "<script>window.location.href = 'fieldofficer/dashboard.php';</script>";
-        } else {
-        echo "<script>window.location.href = 'index.php';</script>";
-        }
-         exit();
-     }
-    else {
-        echo "<script>document.getElementById('wrong').innerHTML = 'Wrong Username or Password';</script>";
-  
+      echo "<script>window.location.href = 'fieldofficer/dashboard.php';</script>";
+    } else {
+      echo "<script>window.location.href = 'index.php';</script>";
     }
+    exit();
+  } else {
+    echo "<script>document.getElementById('wrong').innerHTML = 'Wrong Username or Password';</script>";
+  }
 }
 ?>
-

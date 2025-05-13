@@ -25,7 +25,7 @@ if ($site_status === 'active' and $filter === 'Down') {
     s.class AS class,
     s.site_status AS site_status,
     s.active_site_status AS active_site_status,
-    s.site_down_date AS site_down_date,
+    s.downtime_date AS site_down_date,
     (SELECT COUNT(sd.dependent_site_id) FROM dependencies sd WHERE s.primary_id=sd.site_id) AS dependent_sites_count,
     (SELECT COUNT(DISTINCT g.generator_id) FROM generators g WHERE s.primary_id = g.site_id) AS number_of_generators_count
 FROM 

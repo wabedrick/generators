@@ -1,0 +1,449 @@
+<main id="main" class="main">
+
+    <!-- align pagetitle on the left and button on the right -->
+    <div class="d-flex justify-content-between">
+        <div class="pagetitle float-left">
+            <h1>Generators Dashboard</h1>
+            <nav>
+                <ol class="breadcrumb">
+                    <li class="breadcrumb-item"><a href="dashboard.php">Home</a></li>
+                    <li class="breadcrumb-item active">Generators Dashboard</li>
+                </ol>
+            </nav>
+        </div><!-- End Page Title -->
+        <!-- middle div for indicating the period being viewed -->
+        <div class="period">
+            <h4 class="text-muted">Today</h4>
+        </div>
+    </div>
+
+    <section class="section dashboard">
+        <div class="row">
+            <!-- Total Number of Sites Card -->
+            <div class="col-xxl-2 col-md-2">
+                <div class="card info-card revenue-card">
+
+                    <div class="card-body">
+                        <h5 class="card-title fs-6 text-center">Generators</h5>
+
+                        <div>
+
+                            <a href="view-all-generators.php" class="card-link">
+                                <div class="card align-items-center p-2" style="width:auto; height:4rem">
+                                    <p><span class="fs-6 text-primary pt-4">Total</span>
+                                    <p class="" style="margin-top:-.8rem"><?php echo $total_generators; ?></p>
+                                    </p>
+                                </div>
+                            </a>
+
+                        </div>
+
+                        <a href="view-generators-on-status.php?status=Operational" class="card-link">
+                            <div class="card align-items-center" style="width:auto; height:4rem">
+                                <p><span class="fs-6 text-primary">Operational</span>
+                                <p class="" style="margin-top:-.8rem"><?php echo $total_oper_generators; ?></p>
+                                </p>
+                            </div>
+                        </a>
+
+                        <a href="view-generators-on-status.php?status=Not Operational" class="card-link">
+                            <div class="card align-items-center" style="margin-top:-2rem; width:auto; height:4rem">
+                                <p><span class="fs-6 text-danger pt-4">Not Oprtnal</span>
+                                <p class="" style="margin-top:-.8rem"><?php echo $total_notoper_generators; ?></p>
+                                </p>
+                            </div>
+                        </a>
+
+                        <a href="view-generators-on-status.php?status=N/A" class="card-link">
+                            <div class="card align-items-center" style="margin-top:-2rem; width:auto; height:4rem">
+                                <p><span class="fs-6 text-success pt-4">Other(N/A)</span>
+                                <p class="" style="margin-top:-.8rem"><?php echo $total_NA_generators; ?></p>
+                                </p>
+                            </div>
+                        </a>
+
+                    </div>
+                </div>
+
+            </div>
+
+            <div class="col-md-5">
+                <div class="card">
+                    <div class="card-body">
+                        <h5 class="card-title fs-6 text-center">Generators by Age</h5>
+                        <div id="barChart"></div>
+                        <script src="https://cdn.jsdelivr.net/npm/apexcharts"></script>
+                        <script>
+                            document.addEventListener("DOMContentLoaded", () => {
+                                // Get the data from PHP
+                                const barChartData = <?php echo $barChartDataJson; ?>;
+
+                                // Debugging: Check data in browser console
+                                console.log("Bar Chart Data:", barChartData);
+
+                                // Extract categories (labels) and values
+                                const categories = barChartData.map(item => item.category);
+                                const values = barChartData.map(item => item.count);
+
+                                // Initialize the bar chart
+                                const chart = new ApexCharts(document.querySelector("#barChart"), {
+                                    chart: {
+                                        type: 'bar',
+                                        height: 355,
+                                        events: {
+                                            // Add click event handler for the chart
+                                            dataPointSelection: function(event, chartContext, config) {
+                                                // Get the selected age category
+                                                const selectedCategory = categories[config.dataPointIndex];
+
+                                                // Navigate to the generators by age page
+                                                window.location.href = `generators-by-age.php?category=${encodeURIComponent(selectedCategory)}`;
+                                            }
+                                        }
+                                    },
+                                    series: [{
+                                        name: 'Number of Generators',
+                                        data: values
+                                    }],
+                                    xaxis: {
+                                        categories: categories
+                                    },
+                                    yaxis: {
+                                        tickAmount: Math.ceil(Math.max(...values) / 200), // Ensure ticks are spaced by 200
+                                        labels: {
+                                            formatter: function(val) {
+                                                return val.toFixed(0); // Ensure whole numbers
+                                            }
+                                        }
+                                    },
+                                    colors: ['#007bff'], // Bar color
+                                    plotOptions: {
+                                        bar: {
+                                            horizontal: false,
+                                            columnWidth: '50%'
+                                        }
+                                    }
+                                });
+
+                                // Render the chart
+                                chart.render();
+                            });
+                        </script>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-md-5">
+                <div class="card">
+                    <div class="card-body">
+                        <h5 class="card-title fs-6 text-center">Generators by Actual RHrs</h5>
+                        <div id="barChartOne"></div>
+
+                        <script>
+                            document.addEventListener("DOMContentLoaded", () => {
+                                // Get the data from PHP
+                                const barChartData = <?php echo $barChartDataTwoJson; ?>;
+
+                                // Debugging: Check data in browser console
+                                console.log("Bar Chart Data:", barChartData);
+
+                                // Extract categories (labels) and values
+                                const categories = barChartData.map(item => item.category);
+                                const values = barChartData.map(item => item.count);
+
+                                // Initialize the bar chart
+                                const chart = new ApexCharts(document.querySelector("#barChartOne"), {
+                                    chart: {
+                                        type: 'bar',
+                                        height: 355
+                                    },
+                                    series: [{
+                                        name: 'Number of Generators',
+                                        data: values
+                                    }],
+                                    xaxis: {
+                                        categories: categories
+                                    },
+                                    yaxis: {
+                                        tickAmount: Math.ceil(Math.max(...values) / 200), // Ensure ticks are spaced by 200
+                                        labels: {
+                                            formatter: function(val) {
+                                                return val.toFixed(0); // Ensure whole numbers
+                                            }
+                                        }
+                                    },
+                                    colors: ['#007bff'], // Bar color
+                                    plotOptions: {
+                                        bar: {
+                                            horizontal: false,
+                                            columnWidth: '50%'
+                                        }
+                                    }
+                                });
+
+                                // Render the chart
+                                chart.render();
+                            });
+                        </script>
+                    </div>
+                </div>
+            </div>
+
+        </div><!-- End Total Number of Sites Card -->
+
+        <!-- GENERATOR BY CAPACITY -->
+        <div class="col-md">
+            <div class="card">
+                <div class="card-body">
+                    <h5 class="card-title fs-6 text-center">
+                        Generators by Capacity
+                    </h5>
+                    <div id="radarChart"></div>
+                    <script>
+                        document.addEventListener("DOMContentLoaded", () => {
+                            // Use PHP-generated JSON data
+                            const chartData = <?php echo $chartDataJson; ?>;
+
+                            // Debug: Log the chart data to the console
+                            console.log("Chart Data:", chartData);
+
+                            // Extract labels, values, and colors from chartData
+                            const labels = chartData.map(item => item.name); // Labels (e.g., "10 KW/DC (4, 10.00%)")
+                            const values = chartData.map(item => item.value); // Values (e.g., 4)
+                            const colors = chartData.map(item => item.color); // Colors (e.g., "#FF0000")
+
+                            // Debug: Log the extracted labels, values, and colors
+                            console.log("Labels:", labels);
+                            console.log("Values:", values);
+                            console.log("Colors:", colors);
+
+                            // Initialize the radar chart
+                            const chart = new ApexCharts(document.querySelector("#radarChart"), {
+                                chart: {
+                                    height: 440,
+                                    type: 'radar',
+                                    toolbar: {
+                                        show: true
+                                    }
+                                },
+                                series: [{
+                                    name: 'Generators',
+                                    data: values // Use the values for the radar chart
+                                }],
+                                labels: labels, // Use the labels for the radar chart (includes value and percentage)
+                                colors: [colors[0]], // Use the first color for the radar chart (or customize as needed)
+                                plotOptions: {
+                                    radar: {
+                                        size: 200,
+                                        polygons: {
+                                            strokeColors: '#e9e9e9',
+                                            fill: {
+                                                colors: ['#f8f8f8', '#fff']
+                                            }
+                                        }
+                                    }
+                                },
+                                markers: {
+                                    size: 4,
+                                    colors: ['#fff'],
+                                    strokeColors: colors[0], // Use the first color for the markers
+                                    strokeWidth: 2,
+                                },
+                                tooltip: {
+                                    y: {
+                                        formatter: function(val) {
+                                            return val; // Display the raw value in the tooltip
+                                        }
+                                    }
+                                },
+                                yaxis: {
+                                    tickAmount: 5, // Number of ticks on the y-axis
+                                    labels: {
+                                        formatter: function(val) {
+                                            return val.toFixed(0); // Display whole numbers on the y-axis
+                                        }
+                                    }
+                                }
+                            });
+
+                            // Render the chart
+                            chart.render();
+                        });
+                    </script>
+                </div>
+            </div>
+        </div>
+
+        <!-- GENERATOR BY OPERATION TIME -->
+        <div class="row">
+
+            <div class="col-md-5">
+                <div class="card">
+                    <div class="card-body">
+                        <h5 class="card-title fs-6 text-center">Generators by %age Operation Time</h5>
+
+                        <!-- Line Chart Container -->
+                        <div id="polarAreaChart"></div>
+
+                        <script>
+                            document.addEventListener("DOMContentLoaded", () => {
+                                // Get PHP-generated JSON data
+                                const chartLabels = <?php echo $chartLabelsJson; ?>;
+                                const chartValues = <?php echo $chartValuesJson; ?>;
+                                const chartColors = <?php echo $chartColorsJson; ?>;
+
+                                // Initialize the Polar Area Chart
+                                const chart = new ApexCharts(document.querySelector("#polarAreaChart"), {
+                                    chart: {
+                                        type: 'polarArea',
+                                        height: 700,
+                                        toolbar: {
+                                            show: true
+                                        }
+                                    },
+                                    series: chartValues, // Data values (Number of Generators)
+                                    labels: chartLabels, // Labels (Percentage Operation Time)
+                                    stroke: {
+                                        colors: ['#ffffff'], // White border between segments
+                                        width: 2
+                                    },
+                                    fill: {
+                                        opacity: 0.85 // Transparency effect
+                                    },
+                                    colors: chartColors, // Assign unique colors
+                                    tooltip: {
+                                        y: {
+                                            formatter: function(val, {
+                                                seriesIndex
+                                            }) {
+                                                return `Generators: ${val} (at ${chartLabels[seriesIndex]})`;
+                                            }
+                                        }
+                                    },
+                                    plotOptions: {
+                                        size: 200,
+                                        polarArea: {
+                                            rings: {
+                                                strokeWidth: 1
+                                            },
+                                            spokes: {
+                                                strokeWidth: 1
+                                            }
+                                        }
+                                    },
+                                    legend: {
+                                        position: 'bottom'
+                                    }
+                                });
+
+                                // Render the chart
+                                chart.render();
+
+                                // Change cursor to pointer on hover
+                                document.querySelector("#lineChart").style.cursor = "pointer";
+                            });
+                        </script>
+                        <!-- End Line Chart -->
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-md-7">
+                <div class="card">
+                    <div class="card-body">
+                        <h5 class="card-title fs-6 text-center">
+                            Generators by Brand
+                        </h5>
+                        <div id="radarChartOne"></div>
+                        <script>
+                            document.addEventListener("DOMContentLoaded", () => {
+                                // Use PHP-generated JSON data
+                                const pieChartData = <?php echo isset($pieChartDataJson) ? $pieChartDataJson : '[]'; ?>;
+
+                                // Debug: Log the chart data to the console
+                                console.log("Chart Data:", pieChartData);
+
+                                // Validate data
+                                if (!pieChartData || !Array.isArray(pieChartData) || pieChartData.length === 0) {
+                                    console.error("No valid chart data available.");
+                                    return;
+                                }
+
+                                // Extract labels, values, and colors
+                                const labels = pieChartData.map(item => item.name);
+                                const values = pieChartData.map(item => item.value);
+                                const colors = pieChartData.map(item => item.color);
+
+                                console.log("Labels:", labels);
+                                console.log("Values:", values);
+                                console.log("Colors:", colors);
+
+                                // Initialize the radar chart
+                                const chart = new ApexCharts(document.querySelector("#radarChartOne"), {
+                                    chart: {
+                                        height: 375,
+                                        type: 'radar',
+                                        toolbar: {
+                                            show: true
+                                        }
+                                    },
+                                    series: [{
+                                        name: 'Generators',
+                                        data: values
+                                    }],
+                                    labels: labels,
+                                    colors: colors.length > 0 ? colors : ['#FF5733'],
+                                    plotOptions: {
+                                        radar: {
+                                            size: 150,
+                                            polygons: {
+                                                strokeColors: '#e9e9e9',
+                                                fill: {
+                                                    colors: ['#f8f8f8', '#fff']
+                                                }
+                                            }
+                                        }
+                                    },
+                                    markers: {
+                                        size: 4,
+                                        colors: ['#fff'],
+                                        strokeColors: colors[0] || '#FF5733',
+                                        strokeWidth: 2
+                                    },
+                                    tooltip: {
+                                        y: {
+                                            formatter: function(val) {
+                                                return val;
+                                            }
+                                        }
+                                    },
+                                    yaxis: {
+                                        tickAmount: 5,
+                                        labels: {
+                                            formatter: function(val) {
+                                                return val.toFixed(0);
+                                            }
+                                        }
+                                    }
+                                });
+
+                                // Render the chart
+                                chart.render();
+                            });
+                        </script>
+
+                    </div>
+                </div>
+            </div>
+
+        </div>
+
+        </div>
+        </div>
+        </div>
+
+        </div>
+
+    </section>
+
+</main>

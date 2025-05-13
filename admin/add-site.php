@@ -4,119 +4,212 @@ session_start();
 if (!isset($_SESSION["username"])) {
   header('location: ../index.php');
 }
-?>
 
-<?php include 'header_aside.php'; ?>
+include 'header_aside.php';
+?>
 
 <!--main content-->
 <main id="main" class="main">
 
-  <?php if (isset($_SESSION['message'])) { ?>
+  <?php if (isset($_SESSION['message'])): ?>
     <div class="container" id="message-container">
       <div class="row">
         <div class="col-md-12">
-          <div class="alert alert-danger d-flex justify-content-between align-items-center">
+          <div class="alert alert-<?php echo $_SESSION['message_type']; ?> d-flex justify-content-between align-items-center">
             <?php echo $_SESSION['message']; ?>
-            <!-- add button for removing the alert message -->
             <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
           </div>
         </div>
       </div>
     </div>
-  <?php }
-  unset($_SESSION['message']); ?>
+  <?php
+    unset($_SESSION['message']);
+    unset($_SESSION['message_type']);
+  endif; ?>
 
   <section class="section">
-    <!--form for adding a new Site to the Database-->
+    <div class="card">
+      <div class="card-body">
+        <h5 class="card-title">Add New Site</h5>
 
-    <form method="POST" action="add-site.php" enctype="multipart/form-data" class="row g-3">
-      <div class="col-md-6">
-        <label for="inputName5" class="form-label">Site ID</label>
-        <input type="text" class="form-control" id="inputName5" name="site-id" required>
+        <form method="POST" action="add-site.php" enctype="multipart/form-data" class="row g-3 needs-validation" novalidate>
+          <!-- Primary Site Information -->
+          <div class="col-md-6">
+            <label for="primary_id" class="form-label">Primary ID *</label>
+            <input type="text" class="form-control" id="primary_id" name="primary_id" required>
+            <div class="invalid-feedback">
+              Please provide a Primary ID.
+            </div>
+          </div>
+
+          <div class="col-md-6">
+            <label for="secondary_id" class="form-label">Secondary ID *</label>
+            <input type="text" class="form-control" id="secondary_id" name="secondary_id" required>
+            <div class="invalid-feedback">
+              Please provide a Secondary ID.
+            </div>
+          </div>
+
+          <div class="col-md-6">
+            <label for="rf_id" class="form-label">RF ID *</label>
+            <input type="text" class="form-control" id="rf_id" name="rf_id" required>
+            <div class="invalid-feedback">
+              Please provide an RF ID.
+            </div>
+          </div>
+
+          <div class="col-md-6">
+            <label for="site_name" class="form-label">Site Name *</label>
+            <input type="text" class="form-control" id="site_name" name="site_name" required>
+            <div class="invalid-feedback">
+              Please provide a Site Name.
+            </div>
+          </div>
+
+          <!-- Location Information -->
+          <div class="col-md-4">
+            <label for="latitude" class="form-label">Latitude *</label>
+            <input type="number" class="form-control" id="latitude" name="latitude" step="0.00000001" required>
+            <div class="invalid-feedback">
+              Please provide a valid latitude.
+            </div>
+          </div>
+
+          <div class="col-md-4">
+            <label for="longitude" class="form-label">Longitude *</label>
+            <input type="number" class="form-control" id="longitude" name="longitude" step="0.00000001" required>
+            <div class="invalid-feedback">
+              Please provide a valid longitude.
+            </div>
+          </div>
+
+          <div class="col-md-4">
+            <label for="city_region" class="form-label">City/Region *</label>
+            <input type="text" class="form-control" id="city_region" name="city_region" required>
+            <div class="invalid-feedback">
+              Please provide a City/Region.
+            </div>
+          </div>
+
+          <!-- Site Classification -->
+          <div class="col-md-4">
+            <label for="tx_site_type" class="form-label">TX Site Type *</label>
+            <select class="form-select" id="tx_site_type" name="tx_site_type" required>
+              <option value="" selected disabled>Choose...</option>
+              <option value="Regular">Regular</option>
+              <option value="Hub">Hub</option>
+              <option value="Special">Special</option>
+            </select>
+            <div class="invalid-feedback">
+              Please select a TX Site Type.
+            </div>
+          </div>
+
+          <div class="col-md-4">
+            <label for="department" class="form-label">Department *</label>
+            <select class="form-select" id="department" name="department" required>
+              <option value="" selected disabled>Choose...</option>
+              <option value="Nord">Nord</option>
+              <option value="Sud">Sud</option>
+              <option value="Ouest">Ouest</option>
+              <option value="Est">Est</option>
+              <option value="Centre">Centre</option>
+            </select>
+            <div class="invalid-feedback">
+              Please select a Department.
+            </div>
+          </div>
+
+          <div class="col-md-4">
+            <label for="class" class="form-label">Class *</label>
+            <select class="form-select" id="class" name="class" required>
+              <option value="" selected disabled>Choose...</option>
+              <option value="A">A</option>
+              <option value="B">B</option>
+              <option value="C">C</option>
+              <option value="D">D</option>
+              <option value="E">E</option>
+            </select>
+            <div class="invalid-feedback">
+              Please select a Class.
+            </div>
+          </div>
+
+          <div class="col-md-6">
+            <label for="type_of_site" class="form-label">Type of Site *</label>
+            <input type="text" class="form-control" id="type_of_site" name="type_of_site" required>
+            <div class="invalid-feedback">
+              Please provide a Type of Site.
+            </div>
+          </div>
+
+          <div class="col-md-6">
+            <label for="installation_date" class="form-label">Installation Date *</label>
+            <input type="date" class="form-control" id="installation_date" name="installation_date" required>
+            <div class="invalid-feedback">
+              Please provide an Installation Date.
+            </div>
+          </div>
+
+          <!-- Site Status Information -->
+          <div class="col-md-4">
+            <label for="site_auto_status" class="form-label">Site Auto Status</label>
+            <input type="text" class="form-control" id="site_auto_status" name="site_auto_status">
+          </div>
+
+          <div class="col-md-4">
+            <label for="site_status" class="form-label">Site Status *</label>
+            <select class="form-select" id="site_status" name="site_status" required>
+              <option value="" selected disabled>Choose...</option>
+              <option value="Active">Active</option>
+              <option value="Inactive">Inactive</option>
+              <option value="Maintenance">Maintenance</option>
+            </select>
+            <div class="invalid-feedback">
+              Please select a Site Status.
+            </div>
+          </div>
+
+          <div class="col-md-4">
+            <label for="active_site_status" class="form-label">Active Site Status</label>
+            <input type="text" class="form-control" id="active_site_status" name="active_site_status">
+          </div>
+
+          <!-- Downtime Information -->
+          <div class="col-md-4">
+            <label for="downtime_date" class="form-label">Downtime Date</label>
+            <input type="date" class="form-control" id="downtime_date" name="downtime_date">
+          </div>
+
+          <div class="col-md-4">
+            <label for="downtime_duration" class="form-label">Downtime Duration (hours)</label>
+            <input type="number" class="form-control" id="downtime_duration" name="downtime_duration" min="0">
+          </div>
+
+          <div class="col-md-4">
+            <label for="created_at" class="form-label">Created At</label>
+            <input type="datetime-local" class="form-control" id="created_at" name="created_at">
+          </div>
+
+          <!-- Additional Information -->
+          <div class="col-12">
+            <label for="problem_summary" class="form-label">Problem Summary</label>
+            <textarea class="form-control" id="problem_summary" name="problem_summary" rows="3"></textarea>
+          </div>
+
+          <div class="col-12">
+            <label for="comment" class="form-label">Comments</label>
+            <textarea class="form-control" id="comment" name="comment" rows="3"></textarea>
+          </div>
+
+          <div class="text-center">
+            <button type="submit" class="btn btn-primary">Submit</button>
+            <button type="reset" class="btn btn-secondary">Reset</button>
+          </div>
+        </form><!-- End Multi Columns Form -->
+
       </div>
-
-      <div class="col-md-6">
-        <label for="inputName5" class="form-label">Other ID</label>
-        <input type="text" class="form-control" id="inputName5" name="other-id" required>
-      </div>
-
-      <div class="col-md-6">
-        <label for="inputEmail5" class="form-label">Latitude</label>
-        <input type="type" class="form-control" id="inputEmail5" name="lat">
-      </div>
-
-      <div class="col-md-6">
-        <label for="inputPassword5" class="form-label">Longitude</label>
-        <input type="text" class="form-control" id="inputPassword5" name="long">
-      </div>
-
-      <div class="col-md-4">
-        <label for="inputAddress5" class="form-label">Site Name</label>
-        <input type="text" class="form-control" id="inputAddres5s" name="site-name">
-      </div>
-
-      <div class="col-md-4">
-        <label for="inputAddress5" class="form-label">City</label>
-        <input type="text" class="form-control" id="inputAddres5s" name="city">
-      </div>
-
-      <div class="col-md-4">
-        <label for="inputState" class="form-label">Region</label>
-        <select id="inputState" class="form-select" name="region">
-          <option selected>Choose...</option>
-          <option value="Central">Central</option>
-          <option value="Eastern">Eastern</option>
-          <option value="Western">Western</option>
-          <option value="Northern">Northern</option>
-          <option value="Southern">Southern</option>
-        </select>
-      </div>
-
-      <div class="col-md-3">
-        <label for="inputAddress5" class="form-label">Dependents</label>
-        <input type="number" class="form-control" id="inputAddres5s" name="dependents">
-      </div>
-
-      <div class="col-md-3">
-        <label for="inputAddress5" class="form-label">Number Of Generators</label>
-        <input type="number" class="form-control" id="inputAddres5s" name="number-of-generators">
-      </div>
-
-      <div class="col-md-3">
-        <label for="inputState" class="form-label">Category</label>
-        <select id="inputState" class="form-select" name="category">
-          <option selected>Choose...</option>
-          <option value="High">High</option>
-          <option value="Moderate">Moderate</option>
-          <option value="Low">Low</option>
-          <option value="MM">MM</option>
-          <option value="Hub>5">Hub>5</option>
-          <option value="Hub>5+MM">Hub>5+MM</option>
-          <option value="Hub<5">Hub< 5 </option>
-        </select>
-      </div>
-
-      <div class="col-md-3">
-        <label for="inputState" class="form-label">Class</label>
-        <select id="inputState" class="form-select" name="class">
-          <option selected>Choose...</option>
-          <option>A</option>
-          <option>B</option>
-          <option>C</option>
-          <option>D</option>
-        </select>
-      </div>
-
-      <div class="col-md-6">
-        <label for="inputAddress5" class="form-label">Installation Date</label>
-        <input type="date" class="form-control" id="inputAddres5s" name="installation-date">
-      </div>
-
-      <div class="text-center">
-        <button type="submit" class="btn btn-primary">Submit</button>
-      </div>
-    </form><!-- End Multi Columns Form -->
-
+    </div>
   </section>
 
 </main><!-- End #main -->
@@ -124,58 +217,160 @@ if (!isset($_SESSION["username"])) {
 <!-- ======= Footer ======= -->
 <?php include 'footer.php'; ?>
 
+<!-- Form Validation Script -->
+<script>
+  // Example starter JavaScript for disabling form submissions if there are invalid fields
+  (() => {
+    'use strict'
+
+    // Fetch all the forms we want to apply custom Bootstrap validation styles to
+    const forms = document.querySelectorAll('.needs-validation')
+
+    // Loop over them and prevent submission
+    Array.from(forms).forEach(form => {
+      form.addEventListener('submit', event => {
+        if (!form.checkValidity()) {
+          event.preventDefault()
+          event.stopPropagation()
+        }
+
+        form.classList.add('was-validated')
+      }, false)
+    })
+  })()
+</script>
 
 <?php
 // Check if the form is submitted
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-  // Validate and sanitize the form input
-  $siteId = $conn->real_escape_string($_POST['site-id']);
-  $otherId = $conn->real_escape_string($_POST['other-id']);
+  // Initialize error flag
+  $error = false;
 
-  $latitude = $conn->real_escape_string($_POST['lat']);
-  $longitude = $conn->real_escape_string($_POST['long']);
+  // Validate required fields
+  $required_fields = [
+    'primary_id',
+    'secondary_id',
+    'rf_id',
+    'site_name',
+    'latitude',
+    'longitude',
+    'city_region',
+    'tx_site_type',
+    'department',
+    'class',
+    'type_of_site',
+    'installation_date',
+    'site_status'
+  ];
 
-  $sitename = $conn->real_escape_string($_POST['site-name']);
-  $city = $conn->real_escape_string($_POST['city']);
-  $region = $conn->real_escape_string($_POST['region']);
-
-  $number_of_dependents = $conn->real_escape_string($_POST['dependents']);
-  $number_of_generators = $conn->real_escape_string($_POST['number-of-generators']);
-
-  $category = mysqli_real_escape_string($conn, $_POST['category']);
-  $class = mysqli_real_escape_string($conn, $_POST['class']);
-  $installationDate = mysqli_real_escape_string($conn, $_POST['installation-date']);
-
-  // $photoName = $_FILES['photo']['name'];
-  // $imageFileType = strtolower(pathinfo($photoName, PATHINFO_EXTENSION));
-  // $photoTempPath = $_FILES['photo']['tmp_name'];
-  // $photoUploadPath = '../uploads/' . $firstname . "_" . $ninNumber . "." . $imageFileType;
-
-  // Move the uploaded photo to the desired location
-  // move_uploaded_file($photoTempPath, $photoUploadPath);
-  // echo $installationDate;
-  // exit();
-
-
-  $checkQuery = "SELECT * FROM sites WHERE site_id = '$siteId'";
-  $result = $conn->query($checkQuery);
-  if ($result->num_rows > 0) {
-    $_SESSION['message'] = "Site ID already exists.";
-    echo "<script>window.location.href = 'add-site.php';</script>";
-    exit;
+  foreach ($required_fields as $field) {
+    if (empty($_POST[$field])) {
+      $_SESSION['message'] = "Error: $field is required.";
+      $_SESSION['message_type'] = 'danger';
+      $error = true;
+      break;
+    }
   }
 
-  $sql =  "INSERT INTO sites
-  (site_id,other_id, latitude_code, longitude_code,site_name,city,region,dependents,category, class,number_of_generators, starting_date) 
-  VALUES('$siteId','$otherId','$latitude','$longitude','$sitename','$city','$region',$number_of_dependents,
-  '$category','$class', $number_of_generators,'$installationDate')";
+  if (!$error) {
+    // Prepare data for insertion
+    $primary_id = $conn->real_escape_string(trim($_POST['primary_id']));
+    $secondary_id = $conn->real_escape_string(trim($_POST['secondary_id']));
+    $rf_id = $conn->real_escape_string(trim($_POST['rf_id']));
+    $site_name = $conn->real_escape_string(trim($_POST['site_name']));
+    $tx_site_type = $conn->real_escape_string(trim($_POST['tx_site_type']));
+    $department = $conn->real_escape_string(trim($_POST['department']));
+    $city_region = $conn->real_escape_string(trim($_POST['city_region']));
+    $latitude = (float)$_POST['latitude'];
+    $longitude = (float)$_POST['longitude'];
+    $class = $conn->real_escape_string(trim($_POST['class']));
+    $type_of_site = $conn->real_escape_string(trim($_POST['type_of_site']));
+    $installation_date = $conn->real_escape_string(trim($_POST['installation_date']));
 
-  if ($conn->query($sql) === TRUE) {
-    $_SESSION['message'] = "Site added successfully";
-    echo "<script>window.location.href = 'view-sites.php';</script>";
+    // Site status fields
+    $site_auto_status = $conn->real_escape_string(trim($_POST['site_auto_status']));
+    $site_status = $conn->real_escape_string(trim($_POST['site_status']));
+    $active_site_status = $conn->real_escape_string(trim($_POST['active_site_status']));
+
+    // Downtime fields
+    $downtime_date = !empty($_POST['downtime_date']) ? $conn->real_escape_string(trim($_POST['downtime_date'])) : null;
+    $downtime_duration = isset($_POST['downtime_duration']) ? (int)$_POST['downtime_duration'] : null;
+    $created_at = !empty($_POST['created_at']) ? $conn->real_escape_string(trim($_POST['created_at'])) : date('Y-m-d H:i:s');
+
+    // Additional fields
+    $problem_summary = $conn->real_escape_string(trim($_POST['problem_summary']));
+    $comment = $conn->real_escape_string(trim($_POST['comment']));
+
+    // Check if site already exists
+    $checkQuery = "SELECT * FROM sites WHERE primary_id = ?";
+    $stmt = $conn->prepare($checkQuery);
+    $stmt->bind_param("s", $primary_id);
+    $stmt->execute();
+    $result = $stmt->get_result();
+
+    if ($result->num_rows > 0) {
+      $_SESSION['message'] = "Error: Site with this Primary ID already exists.";
+      $_SESSION['message_type'] = 'danger';
+      $error = true;
+    }
+    $stmt->close();
+
+    if (!$error) {
+      // Prepare SQL statement for sites table (assuming both tables are merged or related)
+      $sql = "INSERT INTO sites (
+        primary_id, secondary_id, rf_id, site_name, tx_site_type, department, 
+        city_region, latitude, longitude, class, type_of_site, installation_date,
+        site_auto_status, site_status, active_site_status, downtime_date, 
+        downtime_duration, created_at, problem_summary, comment
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+
+      $stmt = $conn->prepare($sql);
+      if ($stmt) {
+        $stmt->bind_param(
+          "ssssssddssssssssiss",
+          $primary_id,
+          $secondary_id,
+          $rf_id,
+          $site_name,
+          $tx_site_type,
+          $department,
+          $city_region,
+          $latitude,
+          $longitude,
+          $class,
+          $type_of_site,
+          $installation_date,
+          $site_auto_status,
+          $site_status,
+          $active_site_status,
+          $downtime_date,
+          $downtime_duration,
+          $created_at,
+          $problem_summary,
+          $comment
+        );
+
+        if ($stmt->execute()) {
+          $_SESSION['message'] = "Site added successfully!";
+          $_SESSION['message_type'] = 'success';
+          header('Location: view-sites.php');
+          exit;
+        } else {
+          $_SESSION['message'] = "Error: " . $stmt->error;
+          $_SESSION['message_type'] = 'danger';
+        }
+        $stmt->close();
+      } else {
+        $_SESSION['message'] = "Error preparing statement: " . $conn->error;
+        $_SESSION['message_type'] = 'danger';
+      }
+    }
+  }
+
+  // If there was an error, stay on the same page to show the message
+  if ($error) {
+    echo "<script>window.location.href = 'add-site.php';</script>";
     exit;
-  } else {
-    echo "Error: " . $conn->error;
   }
 }
 ?>
